@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="01-local-connection/01-local-connection.csproj" />
   <Project Path="02-local-connection-streaming/02-local-connection-streaming.csproj" />
+  <Project Path="03-agent-with-tools/03-agent-with-tools.csproj" Id="c2f0695b-bd4f-4fd2-821d-2467681db8ee" />
 </Solution>

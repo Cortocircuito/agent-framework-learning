@@ -35,7 +35,8 @@ while (true)
     Console.Write("You: ");
     var userInput = Console.ReadLine();
 
-    if (string.IsNullOrWhiteSpace(userInput) || userInput.Equals("exit", StringComparison.OrdinalIgnoreCase)) break;
+    if (String.IsNullOrWhiteSpace(userInput) ||
+        userInput.Equals("exit", StringComparison.OrdinalIgnoreCase)) break;
 
     try
     {

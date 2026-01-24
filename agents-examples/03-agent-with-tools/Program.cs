@@ -1,33 +1,39 @@
-﻿using System.ClientModel;
+﻿using Microsoft.Extensions.AI;
 using Microsoft.Agents.AI;
-using Microsoft.Extensions.AI;
 using OpenAI;
+using System.ClientModel;
+using _03_agent_with_tools;
 
-// 1. Configure OpenAI client to point to LM Studio
+// 1. Base client
 var client = new OpenAIClient(
     new ApiKeyCredential("lm-studio"),
-    new OpenAIClientOptions { Endpoint = new Uri("http://localhost:1234/v1") }
-);
+    new OpenAIClientOptions { Endpoint = new Uri("http://localhost:1234/v1") });
 
-// 2. Convert OpenAI client to IChatClient (required by Agent Framework)
-// The model ID must match exactly with the one loaded in LM Studio
+// 2. KEY CONFIGURATION: Add "Function Invocation"
+// This allows the client to understand it can call C# methods
 var openAiChatClient = client.GetChatClient("openai/gpt-oss-20b");
-var chatClient = openAiChatClient.AsIChatClient();
+var chatClient = new ChatClientBuilder(openAiChatClient.AsIChatClient())
+    .UseFunctionInvocation()
+    .Build();
 
-// 3. Create AI Agent with medical assistant personality
+// 3. Create the Agent passing the instance of our tools
+var medicalTools = new MedicalTools();
 AIAgent medicalAgent = chatClient.CreateAIAgent(
     name: "MedicalAssistant",
     instructions: """
-                  You are a medical assistant expert in writing weekly reports. 
-                  Your goal is to help organize disorganized clinical notes into a structured format.
-                  Be professional, concise, and ensure medical terminology is accurate.
-                  """
+                  You are a medical assistant. You have access to a tool to search for patient histories.
+                  If the user asks you about a patient, use the 'GetPatientHistory' tool.
+                  Use the information obtained to write the report.
+                  """,
+    tools:
+    [
+        AIFunctionFactory.Create(medicalTools.GetPatientHistory)
+    ] // <--- Register the tool
 );
 
-// 4. Create conversation thread (maintains chat history automatically)
 AgentThread thread = medicalAgent.GetNewThread();
 
-Console.WriteLine("=== Medical Agent (MAF + LM Studio) ===");
+Console.WriteLine("=== Medical Agent with Tools (MAF + LM Studio) ===");
 Console.WriteLine("Type 'exit' to quit\n");
 
 while (true)
