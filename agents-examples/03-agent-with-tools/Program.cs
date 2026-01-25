@@ -5,25 +5,25 @@ using System.ClientModel;
 using _03_agent_with_tools;
 
 // Configuration Constants
-const string LmStudioEndpoint = "http://localhost:1234/v1";
-const string ModelId = "lmstudio-community/Llama-3.2-3B-Instruct-GGUF";
+const string lmStudioEndpoint = "http://localhost:1234/v1";
+const string modelId = "openai/gpt-oss-20b";
 
 Console.ForegroundColor = ConsoleColor.Cyan;
 Console.WriteLine("=== Medical Agent with Tools (MAF + LM Studio) ===");
 Console.ResetColor();
-Console.WriteLine($"Connecting to: {LmStudioEndpoint}");
-Console.WriteLine($"Using model: {ModelId}\n");
+Console.WriteLine($"Connecting to: {lmStudioEndpoint}");
+Console.WriteLine($"Using model: {modelId}\n");
 
 try
 {
     // 1. Base client
     var client = new OpenAIClient(
         new ApiKeyCredential("lm-studio"),
-        new OpenAIClientOptions { Endpoint = new Uri(LmStudioEndpoint) });
+        new OpenAIClientOptions { Endpoint = new Uri(lmStudioEndpoint) });
 
     // 2. KEY CONFIGURATION: Add "Function Invocation"
     // This allows the client to understand it can call C# methods
-    var openAiChatClient = client.GetChatClient(ModelId);
+    var openAiChatClient = client.GetChatClient(modelId);
     var chatClient = new ChatClientBuilder(openAiChatClient.AsIChatClient())
         .UseFunctionInvocation()
         .Build();
@@ -86,7 +86,7 @@ catch (Exception ex)
 {
     Console.ForegroundColor = ConsoleColor.Red;
     Console.WriteLine($"\nCRITICAL ERROR: Could not initialize the agent.");
-    Console.WriteLine($"Make sure LM Studio is running at {LmStudioEndpoint}");
+    Console.WriteLine($"Make sure LM Studio is running at {lmStudioEndpoint}");
     Console.WriteLine($"Details: {ex.Message}");
     Console.ResetColor();
 }
