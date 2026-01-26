@@ -108,8 +108,9 @@ public class AgentGroupChat
             agentIndex = (agentIndex + 1) % _agents.Length;
             turnCount++;
 
-            // For subsequent turns, use empty input since context is in thread history
-            input = string.Empty;
+            // For subsequent turns, use a placeholder since context is in thread history
+            // We can't use empty string as it causes "Argument is whitespace" error
+            input = "continue";
         }
 
         if (turnCount >= _maxTurns)
