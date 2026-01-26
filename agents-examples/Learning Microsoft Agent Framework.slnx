@@ -3,4 +3,5 @@
   <Project Path="02-local-connection-streaming/02-local-connection-streaming.csproj" />
   <Project Path="03-agent-with-tools/03-agent-with-tools.csproj" Id="c2f0695b-bd4f-4fd2-821d-2467681db8ee" />
   <Project Path="04-multi-agent-system/04-multi-agent-system.csproj" Id="04e6c385-25f2-4684-b4b1-65b2ec48b2a7" />
+  <Project Path="05-multi-agent-system-advance/05-multi-agent-system-advance.csproj" Id="8c8676ff-d520-4170-b82a-2c0fcc90bc03" />
 </Solution>
