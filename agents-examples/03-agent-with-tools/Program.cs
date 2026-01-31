@@ -6,7 +6,7 @@ using _03_agent_with_tools;
 
 // Configuration Constants
 const string lmStudioEndpoint = "http://localhost:1234/v1";
-const string modelId = "openai/gpt-oss-20b";
+const string modelId = "qwen2.5-7b-instruct";
 
 Console.ForegroundColor = ConsoleColor.Cyan;
 Console.WriteLine("=== Medical Agent with Tools (MAF + LM Studio) ===");

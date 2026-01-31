@@ -5,7 +5,7 @@ using OpenAI;
 
 // Configuration Constants
 const string LmStudioEndpoint = "http://localhost:1234/v1";
-const string ModelId = "lmstudio-community/Llama-3.2-3B-Instruct-GGUF";
+const string ModelId = "mistralai/mistral-nemo-instruct-2407";
 
 Console.ForegroundColor = ConsoleColor.Cyan;
 Console.WriteLine("=== Medical Agent (MAF + LM Studio) ===");
