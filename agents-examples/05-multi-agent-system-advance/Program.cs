@@ -45,10 +45,15 @@ try
     AIAgent medicalAdmin = chatClient.CreateAIAgent(
         name: "MedicalSecretary",
         instructions: """
-                      You are a hospital administrator. 
+                      You are a hospital administrator.
                       Take the information from DrHouse and format it into a professional report.
-                      IMPORTANT: Once the report is ready, you MUST call the 'SaveReportToDocx' tool to save the file.
-                      Inform the user when the file has been successfully created.
+
+                      IMPORTANT INSTRUCTIONS:
+                      1. Extract the patient's full name from the conversation (e.g., "Juan Palomo", "Herbert Heartstone").
+                      2. Once the report is ready, call the 'SaveReportToPdf' tool EXACTLY ONCE.
+                      3. Pass the patient's actual name to the tool. If no name was mentioned, use "Unknown_Patient".
+                      4. After saving, inform the user that the file has been created.
+                      5. Do NOT call the tool multiple times for the same report.
                       """,
         tools: [AIFunctionFactory.Create(exporter.SaveReportToPdf)] // Registering the tool
     );

@@ -158,8 +158,9 @@ public class AgentGroupChat
     {
         if (_thread == null) return string.Empty;
 
-        // Serialize() returns a JsonElement which we can convert to string
-        return _thread.Serialize(null).ToString(); 
+        // Serialize() returns a JsonElement which we need to serialize properly to JSON
+        var element = _thread.Serialize(null);
+        return JsonSerializer.Serialize(element, new JsonSerializerOptions { WriteIndented = true });
     }
 
     // New: Method to load history into a new thread

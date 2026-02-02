@@ -7,11 +7,11 @@ namespace _06_multi_agent_with_memory;
 
 public class MedicalReportExporter
 {
-    [Description("Saves the medical report into a professional PDF file.")]
+    [Description("Saves the medical report into a professional PDF file. Call this only ONCE per report.")]
     public string SaveReportToPdf(
         [Description("The full text content of the medical report")]
         string reportContent,
-        [Description("The name of the patient for the filename")]
+        [Description("The patient's actual full name extracted from the conversation (e.g., 'Juan Palomo', 'Herbert Heartstone'). Use 'Unknown_Patient' ONLY if no name was provided in the conversation.")]
         string patientName = "Unknown_Patient")
     {
         try
