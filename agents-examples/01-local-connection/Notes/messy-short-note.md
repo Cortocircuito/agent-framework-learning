@@ -78,6 +78,8 @@
 - **🇬🇧 Note:** Patient aged 83 with a history of hypertension, diabetes mellitus, coronary disease and being a carrier of an aortic prosthetic valve, admitted for native mitral endocarditis caused by Enterococcus faecalis, currently on ampicillin + ceftriaxone treatment. An analytic control plan (PET-TAC) is pending to evaluate the infectious involvement of the aortic prosthetic valve.
 - **🇪🇸 Nota:** Paciente de 83 años con antecedente de hipertensión arterial, diabetes militus, enfermedad coronaria y portador de válvula protésica aortica ingresado por endocarditis mitral nativa por enterococo fecalis, en tratamiento ampicilina + ceftriaxona. Plan ver analitica de control pendiente pec-tac para valorar afectación infeciosa de válvula aortica protésica.
 
+---
+
 ### 🦞 14. Patient: Victoria Vida
 
 - **🇬🇧 Note:** 65yo female, presented to the ER with severe abdominal pain and vomiting. Symptoms started suddenly 4 hours ago. Abdominal exam reveals diffuse tenderness, rebound, and guarding. Labs: WBC 20,000, LFTs normal, lipase slightly elevated. CT scan shows acute pancreatitis with necrotizing features. **Admission:** Acute Pancreatitis. **Treatment:** IV fluids, pancreatic enzymes inhibitors (pain control), antiemetics for nausea/vomiting. No oral intake until symptom resolution. Close monitoring of vital signs and lab values for early detection of complications. **Discharge:** Dependent on symptom improvement, oral intake tolerance, and absence of complications.

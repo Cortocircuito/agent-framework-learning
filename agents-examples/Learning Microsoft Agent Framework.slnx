@@ -5,4 +5,5 @@
   <Project Path="04-multi-agent-system/04-multi-agent-system.csproj" Id="04e6c385-25f2-4684-b4b1-65b2ec48b2a7" />
   <Project Path="05-multi-agent-system-advance/05-multi-agent-system-advance.csproj" Id="8c8676ff-d520-4170-b82a-2c0fcc90bc03" />
   <Project Path="06-multi-agent-with-memory/06-multi-agent-with-memory.csproj" Id="850c70cb-b94f-4fcc-9e84-a310960ffd0a" />
+  <Project Path="07-shared-state-memory/07-shared-state-memory.csproj" />
 </Solution>
