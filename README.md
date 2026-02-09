@@ -1,4 +1,4 @@
-# Agent Framework Learning - Medical Assistant Examples
+# Agent Framework Learning - Medical Agents Examples
 
 Learning repository using Microsoft Agent Framework with LM Studio and Llama 3.2 model. This project demonstrates how to build AI agents using the latest Microsoft AI abstractions.
 
