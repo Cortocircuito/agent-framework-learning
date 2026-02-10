@@ -69,6 +69,7 @@ public class CoordinatedAgentGroupChat
 
         // Phase 2: Execute specialist workflow based on coordinator's plan
         var requiredSpecialists = ParseRequiredSpecialists(coordinatorPlan);
+        string? previousSpecialist = null;
 
         foreach (var specialistName in requiredSpecialists)
         {
@@ -81,8 +82,22 @@ public class CoordinatedAgentGroupChat
                 continue;
             }
 
+            // When MedicalSecretary follows DrHouse, inject an explicit task directive
+            // so the LLM knows it must call the database and PDF tools
+            string contextForSpecialist = currentContext;
+            if (specialistName == "MedicalSecretary" && previousSpecialist == "DrHouse")
+            {
+                contextForSpecialist =
+                    $"DrHouse has completed the medical analysis. " +
+                    $"You MUST now execute these steps in order:\n" +
+                    $"1. Call GetPatientData with the patient's name\n" +
+                    $"2. Call UpsertPatientData to save the new findings\n" +
+                    $"3. Call SaveReportToPdf to generate the PDF report\n\n" +
+                    $"DrHouse's analysis:\n{currentContext}";
+            }
+
             // Execute specialist task
-            await foreach (var message in ExecuteSpecialistTurn(specialist, currentContext))
+            await foreach (var message in ExecuteSpecialistTurn(specialist, contextForSpecialist))
             {
                 yield return message;
 
@@ -100,6 +115,7 @@ public class CoordinatedAgentGroupChat
                 }
             }
 
+            previousSpecialist = specialistName;
             turnCount++;
 
             if (shouldTerminate || turnCount >= _maxTurns)
