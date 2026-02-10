@@ -39,6 +39,34 @@ public class CoordinatedAgentGroupChat
     }
 
     /// <summary>
+    /// Direct patient data query — bypasses the coordinator and routes only to MedicalSecretary.
+    /// Use this for simple lookups that don't require medical analysis.
+    /// </summary>
+    /// <param name="patientName">Name of the patient to look up</param>
+    /// <returns>Stream of agent messages from MedicalSecretary</returns>
+    public async IAsyncEnumerable<AgentMessage> RunQueryAsync(string patientName)
+    {
+        _thread ??= _coordinator.GetNewThread();
+
+        if (!_specialists.TryGetValue("MedicalSecretary", out var secretary))
+        {
+            yield return new AgentMessage("System", "[Error: MedicalSecretary not available]");
+            yield break;
+        }
+
+        var query = $"QUERY: Retrieve and display the complete medical record for patient '{patientName}'. " +
+                    $"Call GetPatientData and present the information in a clear, readable format. " +
+                    $"Do NOT call UpsertPatientData or SaveReportToPdf.";
+
+        yield return new AgentMessage("User", query);
+
+        await foreach (var message in ExecuteSpecialistTurn(secretary, query))
+        {
+            yield return message;
+        }
+    }
+
+    /// <summary>
     /// Runs the coordinated conversation with specialist agents.
     /// </summary>
     /// <param name="input">Initial user input</param>

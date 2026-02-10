@@ -239,8 +239,25 @@ try
                         continue;
                     }
 
-                    input = $"QUERY: Retrieve information for patient '{commandArgs}'";
-                    break;
+                    // Direct query: bypass coordinator, MedicalSecretary only
+                    string? queryAgent = null;
+                    await foreach (var message in groupChat.RunQueryAsync(commandArgs))
+                    {
+                        if (queryAgent != message.AuthorName)
+                        {
+                            if (queryAgent != null) Console.WriteLine();
+                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            Console.WriteLine($"\n--- [{message.AuthorName}] ---");
+                            Console.ResetColor();
+                            queryAgent = message.AuthorName;
+                        }
+
+                        if (message.isStreaming)       Console.Write(message.Text);
+                        else if (message.isComplete)   Console.WriteLine();
+                        else                           Console.WriteLine(message.Text);
+                    }
+                    Console.WriteLine();
+                    continue;
 
                 case "/document":
                     if (string.IsNullOrWhiteSpace(commandArgs))
