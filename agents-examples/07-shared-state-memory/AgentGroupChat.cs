@@ -49,12 +49,19 @@ public class AgentGroupChat
         int agentIndex = 0;
         bool shouldTerminate = false;
 
+        // Track turns per agent to prevent endless repetition
+        var agentTurnCounts = new Dictionary<string, int>();
+
         // Add initial user message to conversation history
         yield return new AgentMessage("User", input);
 
         while (!shouldTerminate && turnCount < _maxTurns)
         {
             var currentAgent = _agents[agentIndex];
+
+            // Track this agent's turn count
+            string agentName = currentAgent.Name ?? "Agent";
+            agentTurnCounts[agentName] = agentTurnCounts.GetValueOrDefault(agentName, 0) + 1;
 
             // Stream the agent's response
             var responseBuilder = new System.Text.StringBuilder();
@@ -93,7 +100,11 @@ public class AgentGroupChat
                 );
             }
 
-            // Check termination conditions
+            // Move to next agent (round-robin) and increment turn count FIRST
+            agentIndex = (agentIndex + 1) % _agents.Length;
+            turnCount++;
+
+            // Check termination conditions AFTER incrementing turnCount
             if (hasToolInvocation)
             {
                 // Tool was invoked (e.g., PDF export), task is likely complete
@@ -104,10 +115,22 @@ public class AgentGroupChat
                 // Agent explicitly signaled completion
                 shouldTerminate = true;
             }
-
-            // Move to next agent (round-robin)
-            agentIndex = (agentIndex + 1) % _agents.Length;
-            turnCount++;
+            else if (ContainsUserQuestion(fullResponse))
+            {
+                // Agent is asking user for input, pause collaboration
+                shouldTerminate = true;
+            }
+            else if (agentTurnCounts.GetValueOrDefault(agentName, 0) >= 2)
+            {
+                // Agent has spoken twice without resolution, likely needs user input
+                shouldTerminate = true;
+            }
+            else if (turnCount >= 2 && !hasToolInvocation && agentName == "MedicalSecretary")
+            {
+                // If MedicalSecretary responded without invoking tools after 2+ turns,
+                // this is likely a query response (not documentation)
+                shouldTerminate = true;
+            }
 
             // For subsequent turns, use a placeholder since context is in thread history
             // We can't use empty string as it causes "Argument is whitespace" error
@@ -135,6 +158,8 @@ public class AgentGroupChat
         {
             "task complete",
             "task is complete",
+            "analysis complete",
+            "information retrieved",
             "successfully created",
             "file has been",
             "report saved",
@@ -142,6 +167,29 @@ public class AgentGroupChat
         };
 
         return terminationPhrases.Any(phrase =>
+            response.Contains(phrase, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Checks if the response contains a question for the user.
+    /// </summary>
+    private static bool ContainsUserQuestion(string response)
+    {
+        if (string.IsNullOrWhiteSpace(response))
+            return false;
+
+        // Detect patterns that indicate the agent is waiting for user input
+        var questionIndicators = new[]
+        {
+            "confirme que desea",
+            "por favor confirme",
+            "¿desea que",
+            "please confirm",
+            "do you want",
+            "would you like"
+        };
+
+        return questionIndicators.Any(phrase =>
             response.Contains(phrase, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -156,22 +204,58 @@ public class AgentGroupChat
     // New: Method to export the thread history to a JSON string
     public string ExportHistory()
     {
-        if (_thread == null) return string.Empty;
+        if (_thread == null)
+        {
+            Console.WriteLine("Warning: No conversation history to export.");
+            return string.Empty;
+        }
 
-        // Serialize() returns a JsonElement which we need to serialize properly to JSON
-        var element = _thread.Serialize(null);
-        return JsonSerializer.Serialize(element, new JsonSerializerOptions { WriteIndented = true });
+        try
+        {
+            // Serialize() returns a JsonElement which we need to serialize properly to JSON
+            var element = _thread.Serialize(null);
+            return JsonSerializer.Serialize(element, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error exporting history: {ex.Message}");
+            return string.Empty;
+        }
     }
 
     // New: Method to load history into a new thread
     public void LoadHistory(string jsonHistory, AIAgent agent)
     {
-        if (string.IsNullOrWhiteSpace(jsonHistory)) return;
+        // Input validation
+        if (string.IsNullOrWhiteSpace(jsonHistory))
+        {
+            Console.WriteLine("Warning: Empty history provided, skipping load.");
+            return;
+        }
 
-        try 
+        if (agent == null)
+        {
+            Console.WriteLine("Error: Agent cannot be null for deserialization.");
+            return;
+        }
+
+        try
         {
             var element = JsonSerializer.Deserialize<JsonElement>(jsonHistory);
+
+            // Validate JSON structure
+            if (element.ValueKind != JsonValueKind.Object)
+            {
+                Console.WriteLine("Error: Invalid history format - expected JSON object.");
+                return;
+            }
+
             _thread = agent.DeserializeThread(element, null);
+            Console.WriteLine("Successfully loaded conversation history.");
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"Error: Invalid JSON format in history file - {ex.Message}");
         }
         catch (Exception ex)
         {

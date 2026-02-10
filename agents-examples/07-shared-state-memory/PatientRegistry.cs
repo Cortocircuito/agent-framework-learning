@@ -40,6 +40,10 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
     public string GetPatientData(
         [Description("The patient's full name to search for")] string name)
     {
+        // Input validation
+        if (string.IsNullOrWhiteSpace(name))
+            return "Error: Patient name cannot be empty.";
+
         try
         {
             using var connection = new SqliteConnection(connectionString);
@@ -74,9 +78,13 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
 
             return $"No patient record found for '{name}'. This appears to be a new patient.";
         }
+        catch (SqliteException ex)
+        {
+            return $"Database error retrieving patient data: {ex.Message}";
+        }
         catch (Exception ex)
         {
-            return $"Error retrieving patient data: {ex.Message}";
+            return $"Unexpected error retrieving patient data: {ex.Message}";
         }
     }
 
@@ -92,6 +100,24 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
         [Description("Comma-separated list of current medications (optional)")] string? medications = null,
         [Description("Blood type if known (e.g., 'A+', 'O-') (optional)")] string? bloodType = null)
     {
+        // Input validation
+        if (string.IsNullOrWhiteSpace(name))
+            return "Error: Patient name cannot be empty.";
+
+        if (name.Length > 100)
+            return "Error: Patient name too long (max 100 characters).";
+
+        if (string.IsNullOrWhiteSpace(conditions) && string.IsNullOrWhiteSpace(allergies))
+            return "Error: Must provide at least one of: conditions or allergies.";
+
+        // Validate blood type format if provided
+        if (!string.IsNullOrWhiteSpace(bloodType))
+        {
+            var validBloodTypes = new[] { "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-" };
+            if (!validBloodTypes.Contains(bloodType.ToUpper()))
+                return $"Error: Invalid blood type '{bloodType}'. Must be one of: {string.Join(", ", validBloodTypes)}";
+        }
+
         try
         {
             using var connection = new SqliteConnection(connectionString);
@@ -110,10 +136,15 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
                 """;
             
             command.Parameters.AddWithValue("@name", name);
-            command.Parameters.AddWithValue("@conditions", (object?)conditions ?? DBNull.Value);
-            command.Parameters.AddWithValue("@allergies", (object?)allergies ?? DBNull.Value);
-            command.Parameters.AddWithValue("@medications", (object?)medications ?? DBNull.Value);
-            command.Parameters.AddWithValue("@bloodType", (object?)bloodType ?? DBNull.Value);
+            // Convert empty strings to DBNull to prevent wiping existing data
+            command.Parameters.AddWithValue("@conditions",
+                string.IsNullOrWhiteSpace(conditions) ? DBNull.Value : (object)conditions);
+            command.Parameters.AddWithValue("@allergies",
+                string.IsNullOrWhiteSpace(allergies) ? DBNull.Value : (object)allergies);
+            command.Parameters.AddWithValue("@medications",
+                string.IsNullOrWhiteSpace(medications) ? DBNull.Value : (object)medications);
+            command.Parameters.AddWithValue("@bloodType",
+                string.IsNullOrWhiteSpace(bloodType) ? DBNull.Value : (object)bloodType);
             command.Parameters.AddWithValue("@lastVisit", DateTime.Now.ToString("O"));
 
             var rowsAffected = command.ExecuteNonQuery();
@@ -122,9 +153,69 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
                 ? $"Success: Patient record for '{name}' has been saved to the database."
                 : $"Warning: No changes made to patient record for '{name}'.";
         }
+        catch (SqliteException ex) when (ex.SqliteErrorCode == 19) // UNIQUE constraint
+        {
+            return $"Error: Database constraint violation: {ex.Message}";
+        }
+        catch (SqliteException ex)
+        {
+            return $"Database error: {ex.Message}";
+        }
         catch (Exception ex)
         {
-            return $"Error saving patient data: {ex.Message}";
+            return $"Unexpected error saving patient data: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Lists all patients in the database with basic information.
+    /// </summary>
+    public string ListAllPatients()
+    {
+        try
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = """
+                SELECT Name, Conditions, LastVisit
+                FROM Patients
+                ORDER BY LastVisit DESC
+                """;
+
+            using var reader = command.ExecuteReader();
+
+            if (!reader.HasRows)
+                return "\n📋 No patients found in database.";
+
+            var result = new System.Text.StringBuilder();
+            result.AppendLine("\n📋 PATIENT REGISTRY");
+            result.AppendLine("═══════════════════════════════════════════════════");
+
+            int count = 0;
+            while (reader.Read())
+            {
+                count++;
+                var name = reader.GetString(0);
+                var conditions = reader.IsDBNull(1) ? "No conditions recorded" : reader.GetString(1);
+                var lastVisit = reader.IsDBNull(2) ? "Never" : reader.GetString(2);
+
+                result.AppendLine($"\n{count}. {name}");
+                result.AppendLine($"   Conditions: {conditions}");
+                result.AppendLine($"   Last Visit: {lastVisit}");
+            }
+
+            result.AppendLine($"\nTotal patients: {count}");
+            return result.ToString();
+        }
+        catch (SqliteException ex)
+        {
+            return $"Database error: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            return $"Error listing patients: {ex.Message}";
         }
     }
 }
