@@ -253,13 +253,16 @@ try
 
                     Console.WriteLine("⚙ Enabling multi-turn discussion mode...");
 
-                    // Recreate group chat with discussion mode enabled
+                    // Carry over existing history into the new discussion-mode instance
+                    var existingHistory = groupChat.ExportHistory();
                     groupChat = new(
                         coordinator: coordinator,
                         specialists: specialists,
                         maxTurns: 20,
                         enableDiscussionMode: true
                     );
+                    if (!string.IsNullOrWhiteSpace(existingHistory))
+                        groupChat.LoadHistory(existingHistory, coordinator);
 
                     input = $"DISCUSS: Analyze these notes with team collaboration: {commandArgs}";
                     break;

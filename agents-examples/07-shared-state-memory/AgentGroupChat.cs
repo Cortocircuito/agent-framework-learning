@@ -241,6 +241,7 @@ public class AgentGroupChat
 
         try
         {
+            jsonHistory = TrimHistory(jsonHistory);
             var element = JsonSerializer.Deserialize<JsonElement>(jsonHistory);
 
             // Validate JSON structure
@@ -260,6 +261,71 @@ public class AgentGroupChat
         catch (Exception ex)
         {
             Console.WriteLine($"Failed to load history: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Trims the serialized thread history to the last <paramref name="maxMessages"/> messages,
+    /// always starting at a user message to avoid broken tool-call sequences.
+    /// </summary>
+    private static string TrimHistory(string jsonHistory, int maxMessages = 50)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(jsonHistory);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("storeState", out var storeState) ||
+                !storeState.TryGetProperty("messages", out var messagesElement))
+                return jsonHistory;
+
+            var messages = messagesElement.EnumerateArray().ToList();
+
+            if (messages.Count <= maxMessages)
+                return jsonHistory;
+
+            // Walk back from the trim point until we land on a user message
+            var startIndex = messages.Count - maxMessages;
+            while (startIndex < messages.Count &&
+                   !(messages[startIndex].TryGetProperty("role", out var r) && r.GetString() == "user"))
+            {
+                startIndex++;
+            }
+
+            var trimmed = messages.Skip(startIndex).ToList();
+
+            // Rebuild the JSON, preserving every property except replacing "messages"
+            using var ms = new System.IO.MemoryStream();
+            using var writer = new Utf8JsonWriter(ms, new JsonWriterOptions { Indented = true });
+
+            writer.WriteStartObject();
+            foreach (var rootProp in root.EnumerateObject())
+            {
+                if (rootProp.Name != "storeState") { rootProp.WriteTo(writer); continue; }
+
+                writer.WritePropertyName("storeState");
+                writer.WriteStartObject();
+                foreach (var storeProp in storeState.EnumerateObject())
+                {
+                    if (storeProp.Name != "messages") { storeProp.WriteTo(writer); continue; }
+
+                    writer.WritePropertyName("messages");
+                    writer.WriteStartArray();
+                    foreach (var msg in trimmed) msg.WriteTo(writer);
+                    writer.WriteEndArray();
+                }
+                writer.WriteEndObject();
+            }
+            writer.WriteEndObject();
+            writer.Flush();
+
+            var trimmedJson = System.Text.Encoding.UTF8.GetString(ms.ToArray());
+            Console.WriteLine($"History trimmed: {messages.Count} → {trimmed.Count} messages loaded.");
+            return trimmedJson;
+        }
+        catch
+        {
+            return jsonHistory; // If trimming fails, return original unchanged
         }
     }
 }
