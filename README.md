@@ -6,12 +6,13 @@ Learning repository using Microsoft Agent Framework with LM Studio and Llama 3.2
 
 | Project | Description | Key Feature |
 |---------|-------------|-------------|
-| **[01-local-connection](file:///d:/dev/aprendizaje-agent-framework/agents-examples/01-local-connection)** | Basic agent connection | Thread management & History |
-| **[02-local-connection-streaming](file:///d:/dev/aprendizaje-agent-framework/agents-examples/02-local-connection-streaming)** | Streaming responses | Real-time text generation |
-| **[03-agent-with-tools](file:///d:/dev/aprendizaje-agent-framework/agents-examples/03-agent-with-tools)** | Agent with Function Calling | External tool integration |
-| **[04-multi-agent-system](file:///d:/dev/aprendizaje-agent-framework/agents-examples/04-multi-agent-system)** | Multi-agent collaboration | Sequential pipeline orchestration |
-| **[05-multi-agent-system-advance](file:///d:/dev/aprendizaje-agent-framework/agents-examples/05-multi-agent-system-advance)** | Advanced multi-agent system | Round-robin with streaming |
-| **[06-multi-agent-with-memory](file:///d:/dev/aprendizaje-agent-framework/agents-examples/06-multi-agent-with-memory)** | Multi-agent with persistence | Shared conversation memory |
+| **[01-local-connection](agents-examples/01-local-connection)** | Basic agent connection | Thread management & History |
+| **[02-local-connection-streaming](agents-examples/02-local-connection-streaming)** | Streaming responses | Real-time text generation |
+| **[03-agent-with-tools](agents-examples/03-agent-with-tools)** | Agent with Function Calling | External tool integration |
+| **[04-multi-agent-system](agents-examples/04-multi-agent-system)** | Multi-agent collaboration | Sequential pipeline orchestration |
+| **[05-multi-agent-system-advance](agents-examples/05-multi-agent-system-advance)** | Advanced multi-agent system | Round-robin with streaming |
+| **[06-multi-agent-with-memory](agents-examples/06-multi-agent-with-memory)** | Multi-agent with persistence | Shared conversation memory |
+| **[07-shared-state-memory](agents-examples/07-shared-state-memory)** | Coordinator pattern with database | SQLite persistence & intelligent routing |
 
 ## 🎯 What You'll Learn
 
@@ -25,6 +26,9 @@ Learning repository using Microsoft Agent Framework with LM Studio and Llama 3.2
 - **Collaborative workflows** where agents work together on complex tasks
 - **Shared memory** and conversation persistence across agent interactions
 - **Real-time streaming** in multi-agent scenarios
+- **Coordinator pattern** for intelligent agent routing and task delegation
+- **Database integration** with SQLite for persistent patient records
+- **PDF report generation** from structured medical data
 
 ## 📋 Prerequisites
 
@@ -72,7 +76,12 @@ Learning repository using Microsoft Agent Framework with LM Studio and Llama 3.2
 	- **Project 04**: Sequential pipeline pattern
 	- **Project 05**: Round-robin with streaming support
 	- **Project 06**: Round-robin with persistent memory
-- **MedicalReportExporter.cs** (in Projects 04-06): PDF export tool for medical reports.
+- **CoordinatedAgentGroupChat.cs** (in Project 07): Advanced coordinator-based orchestration:
+	- Intelligent agent routing based on task analysis
+	- Context-aware specialist selection
+	- Multi-turn discussion support
+- **PatientRegistry.cs** (in Project 07): SQLite database manager for patient records.
+- **MedicalReportExporter.cs** (in Projects 04-07): PDF export tool for medical reports.
 
 ## 🔧 Key Concepts
 
@@ -96,8 +105,17 @@ Orchestrator that coordinates multiple AI agents working together:
 ### Multi-Agent Patterns
 - **Specialization**: Each agent has a specific role (e.g., Medical Specialist, Administrator)
 - **Collaboration**: Agents work together on complex tasks requiring different expertise
-- **Tool Integration**: Specific agents can be equipped with tools (e.g., PDF export)
+- **Tool Integration**: Specific agents can be equipped with tools (e.g., PDF export, database access)
 - **Termination Logic**: Conversations end when tools are invoked or termination keywords detected
+
+### Coordinator Pattern (Project 07)
+Intelligent orchestration that replaces fixed round-robin with adaptive routing:
+- **Request Analysis**: Coordinator analyzes user input to determine required specialists
+- **Dynamic Routing**: Only invokes necessary agents based on task complexity
+- **Context Passing**: Each specialist builds on previous agent outputs
+- **Synthesis**: Coordinator provides final recommendations after specialist consultation
+- **Database Persistence**: Patient records stored in SQLite with full CRUD operations
+- **Command System**: Specialized commands for different workflow modes (`/query`, `/document`, `/list`)
 
 ## 🎓 Sample Interaction
 
@@ -126,6 +144,37 @@ Medical Analysis:
 Generating professional report...
 ✓ Report saved to: medical_report_20260127.pdf
 File successfully created and ready for review.
+```
+
+### Coordinator-Based System (Project 07)
+```text
+=== Coordinator-Based Multi-Agent Medical System ===
+
+> /document Patient Maria Garcia, DOB 1985-03-15, Room 302, fever and cough
+
+--- [MedicalCoordinator] ---
+Based on this request, I will consult: ClinicalDataExtractor, MedicalSecretary
+Approach: Extract clinical data, then document in database and generate report
+
+--- [ClinicalDataExtractor] ---
+Patient: Maria Garcia
+Conditions: Fever, Cough
+Date of Birth: 1985-03-15
+Room Number: 302
+Analysis complete.
+
+--- [MedicalSecretary] ---
+✓ Patient record updated in database
+✓ Report saved to: medical_report_maria_garcia_20260214.pdf
+TASK_COMPLETE: Report saved.
+
+> /query Maria Garcia
+
+--- [MedicalSecretary] ---
+Patient: Maria Garcia
+Conditions: Fever, Cough
+Date of Birth: 1985-03-15
+Room: 302
 ```
 
 ## 🐛 Troubleshooting
