@@ -145,7 +145,7 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
         [Description("Full-text current diagnosis - NO acronyms (optional)")] string? currentDiagnosis = null,
         [Description("Clinical evolution: Good, Stable, or Bad (optional)")] string? evolution = null,
         [Description("Comma-separated list of plan items (optional)")] string? plan = null,
-        [Description("Any clinical information that does not fit in the other fields (e.g. vital signs, social/family history, pending results, contextual notes). Must NOT include allergies or medications (those belong in medicalHistory) (optional)")] string? observations = null)
+        [Description("Any clinical information that does not fit in the other fields (e.g. vital signs, social/family history, contextual notes). Must NOT include allergies or medications (those belong in medicalHistory) or pending results (those belong in plan) (optional)")] string? observations = null)
     {
         // Input validation
         if (string.IsNullOrWhiteSpace(fullName))

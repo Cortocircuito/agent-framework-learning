@@ -30,7 +30,7 @@ public class MedicalReportExporter
         string? evolution = null,
         [Description("Comma-separated plan items")]
         string? plan = null,
-        [Description("Any clinical information that does not fit in the other fields (e.g. vital signs, social/family history, pending results, contextual notes). Must NOT include allergies or medications (those belong in medicalHistory)")]
+        [Description("Any clinical information that does not fit in the other fields (e.g. vital signs, social/family history, contextual notes). Must NOT include allergies or medications (those belong in medicalHistory) or pending results (those belong in plan)")]
         string? observations = null)
     {
         try

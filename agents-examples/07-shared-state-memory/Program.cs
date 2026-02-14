@@ -81,19 +81,19 @@ try
                       Medical History (AP): [comma-separated list of chronic conditions as acronyms (HTA, DL, ICC, FA, DM, COPD, etc.), allergies (e.g. Allergy:Penicillin), and relevant ongoing medications (e.g. Med:Metformin)]
                       Current Diagnosis (Dx): [full-text description, NO acronyms - spell everything out]
                       Evolution: [Good | Stable | Bad - assess patient's clinical trajectory]
-                      Plan: [comma-separated list of ANY treatment items, procedures, or actions mentioned]
-                        Examples: "Pending Labs - CBC, BMP", "CT scan scheduled", "Cardiology consult",
-                        "Start IV antibiotics", "Adjust insulin", "Physical therapy", etc.
-                        Extract whatever treatment-related items you find in the notes.
-                      Observations: [anything that does not belong in the above fields — e.g. vital signs, social/family history, pending results, or any other relevant context. DO NOT include allergies or medications (those go in Medical History). DO NOT repeat anything already listed in Medical History (AP)]
+                      Plan: [comma-separated list of ALL active treatments, AND anything ordered, scheduled, pending, or requested — regardless of whether it has been done yet]
+                        Examples: "Bronchodilators", "Inhaled corticosteroids", "Pending chest CT scan without contrast",
+                        "Pending Labs - CBC, BMP", "Cardiology consult", "Start IV antibiotics", "Physical therapy", etc.
+                        RULE: if something is described as "pending", "scheduled", "requested", "ordered", or "to be done", it goes here, NOT in Observations.
+                      Observations: [anything that does not belong in the above fields — e.g. vital signs, social/family history, or any other relevant context. DO NOT include allergies or medications (those go in Medical History). DO NOT include anything pending, scheduled, ordered, or requested — those go in Plan. DO NOT repeat anything already listed in Medical History (AP)]
                       Clinical Summary: [2-3 sentence clinical assessment]
 
                       CRITICAL RULES:
                       - Medical History (AP): chronic conditions as acronyms, allergies (Allergy:X), and ongoing medications (Med:X)
                       - Current Diagnosis (Dx): FULL TEXT, NO acronyms (spell out everything)
                       - Evolution: Must be exactly "Good", "Stable", or "Bad"
-                      - Plan: Be flexible - extract any treatment items mentioned
-                      - Observations: NEVER include allergies, medications, or anything already captured in Medical History (AP)
+                      - Plan: includes active treatments AND anything pending, scheduled, ordered, or requested (e.g. "Pending chest CT scan without contrast" → Plan)
+                      - Observations: NEVER include allergies, medications, or anything pending/scheduled/ordered (those go in Plan), or anything already captured in Medical History (AP)
 
                       Always end your response with "Analysis complete."
                       """
