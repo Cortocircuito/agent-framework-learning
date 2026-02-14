@@ -78,21 +78,22 @@ try
                       Patient: [full name]
                       Room: [room number/identifier, or "not mentioned" if not in notes]
                       Age: [numeric age, or "not mentioned" if not in notes]
-                      Medical History (AP): [comma-separated acronyms ONLY: HTA, DL, ICC, FA, DM, COPD, etc.]
+                      Medical History (AP): [comma-separated list of chronic conditions as acronyms (HTA, DL, ICC, FA, DM, COPD, etc.), allergies (e.g. Allergy:Penicillin), and relevant ongoing medications (e.g. Med:Metformin)]
                       Current Diagnosis (Dx): [full-text description, NO acronyms - spell everything out]
                       Evolution: [Good | Stable | Bad - assess patient's clinical trajectory]
                       Treatment Plan: [comma-separated list of ANY treatment items, procedures, or actions mentioned]
                         Examples: "Pending Labs - CBC, BMP", "CT scan scheduled", "Cardiology consult", 
                         "Start IV antibiotics", "Adjust insulin", "Physical therapy", etc.
                         Extract whatever treatment-related items you find in the notes.
-                      Observations: [additional clinical notes, concerns, or context]
+                      Observations: [anything that does not belong in the above fields — e.g. vital signs, social/family history, pending results, or any other relevant context. DO NOT include allergies or medications (those go in Medical History). DO NOT repeat anything already listed in Medical History (AP)]
                       Clinical Summary: [2-3 sentence clinical assessment]
 
                       CRITICAL RULES:
-                      - Medical History (AP): ONLY acronyms (HTA, DL, ICC, etc.)
+                      - Medical History (AP): chronic conditions as acronyms, allergies (Allergy:X), and ongoing medications (Med:X)
                       - Current Diagnosis (Dx): FULL TEXT, NO acronyms (spell out everything)
                       - Evolution: Must be exactly "Good", "Stable", or "Bad"
                       - Treatment Plan: Be flexible - extract any treatment items mentioned
+                      - Observations: NEVER include allergies, medications, or anything already captured in Medical History (AP)
 
                       Always end your response with "Analysis complete."
                       """

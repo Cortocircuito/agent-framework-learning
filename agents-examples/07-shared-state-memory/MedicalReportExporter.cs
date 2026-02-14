@@ -13,19 +13,25 @@ public class MedicalReportExporter
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
-    [Description("Saves the medical report into a professional PDF file. Call this only ONCE per report.")]
+    [Description(
+        "Saves the medical report into a professional PDF file. Call this only ONCE per report.")]
     public string SaveReportToPdf(
-        [Description("The full text content of the medical report")]
-        string reportContent,
+        [Description("The full text content of the medical report")] string reportContent,
         [Description("The patient's actual full name extracted from the conversation")]
         string patientName = "Unknown_Patient",
-        [Description("Room number or identifier")] string? room = null,
+        [Description("Room number or identifier")]
+        string? room = null,
         [Description("Patient age")] int? age = null,
-        [Description("Comma-separated medical history acronyms")] string? medicalHistory = null,
-        [Description("Full-text current diagnosis")] string? currentDiagnosis = null,
-        [Description("Clinical evolution: Good, Stable, or Bad")] string? evolution = null,
-        [Description("Comma-separated treatment plan items")] string? treatmentPlan = null,
-        [Description("Additional observations")] string? observations = null)
+        [Description("Comma-separated list of chronic conditions as acronyms (HTA, DL, ICC, etc.), allergies (e.g. Allergy:Penicillin), and ongoing medications (e.g. Med:Metformin)")]
+        string? medicalHistory = null,
+        [Description("Full-text current diagnosis")]
+        string? currentDiagnosis = null,
+        [Description("Clinical evolution: Good, Stable, or Bad")]
+        string? evolution = null,
+        [Description("Comma-separated treatment plan items")]
+        string? treatmentPlan = null,
+        [Description("Any clinical information that does not fit in the other fields (e.g. vital signs, social/family history, pending results, contextual notes). Must NOT include allergies or medications (those belong in medicalHistory)")]
+        string? observations = null)
     {
         try
         {
@@ -103,7 +109,7 @@ public class MedicalReportExporter
                                 txt.Span("Name: ").SemiBold();
                                 txt.Span(patientName).FontColor(Colors.Blue.Darken2);
                             });
-                            
+
                             if (!string.IsNullOrWhiteSpace(room))
                             {
                                 patientBox.Item().Text(txt =>
@@ -112,7 +118,7 @@ public class MedicalReportExporter
                                     txt.Span(room).FontColor(Colors.Blue.Darken2);
                                 });
                             }
-                            
+
                             if (age.HasValue)
                             {
                                 patientBox.Item().Text(txt =>
@@ -121,7 +127,7 @@ public class MedicalReportExporter
                                     txt.Span(age.ToString()).FontColor(Colors.Blue.Darken2);
                                 });
                             }
-                            
+
                             patientBox.Item().PaddingTop(5).Text(txt =>
                             {
                                 txt.Span("Report Date: ").SemiBold();
@@ -138,41 +144,45 @@ public class MedicalReportExporter
                             // Medical History Section
                             if (!string.IsNullOrWhiteSpace(medicalHistory))
                             {
-                                content.Item().PaddingTop(15).Text("MEDICAL HISTORY (AP)").FontSize(12).SemiBold().FontColor(Colors.Blue.Darken2);
+                                content.Item().PaddingTop(15).Text("MEDICAL HISTORY (AP)")
+                                    .FontSize(12).SemiBold().FontColor(Colors.Blue.Darken2);
                                 content.Item().PaddingTop(5).Text(medicalHistory).FontSize(11);
                             }
 
                             // Current Diagnosis Section
                             if (!string.IsNullOrWhiteSpace(currentDiagnosis))
                             {
-                                content.Item().PaddingTop(15).Text("CURRENT DIAGNOSIS (Dx)").FontSize(12).SemiBold().FontColor(Colors.Blue.Darken2);
-                                content.Item().PaddingTop(5).Text(currentDiagnosis).FontSize(11).LineHeight(1.5f);
+                                content.Item().PaddingTop(15).Text("CURRENT DIAGNOSIS (Dx)")
+                                    .FontSize(12).SemiBold().FontColor(Colors.Blue.Darken2);
+                                content.Item().PaddingTop(5).Text(currentDiagnosis).FontSize(11)
+                                    .LineHeight(1.5f);
                             }
 
                             // Evolution Status Section
                             if (!string.IsNullOrWhiteSpace(evolution))
                             {
-                                content.Item().PaddingTop(15).Text("EVOLUTION").FontSize(12).SemiBold().FontColor(Colors.Blue.Darken2);
-                                content.Item().PaddingTop(5).Background(GetEvolutionColor(evolution)).Padding(10).Text(evolution)
+                                content.Item().PaddingTop(15).Text("EVOLUTION").FontSize(12)
+                                    .SemiBold().FontColor(Colors.Blue.Darken2);
+                                content.Item().PaddingTop(5)
+                                    .Background(GetEvolutionColor(evolution)).Padding(10)
+                                    .Text(evolution)
                                     .FontSize(11)
                                     .SemiBold()
                                     .FontColor(Colors.White);
                             }
 
-                            // Clinical Report Content
-                            content.Item().PaddingTop(15).Text(reportContent)
-                                .FontSize(11)
-                                .LineHeight(1.5f)
-                                .Justify();
-
                             // Treatment Plan Section
                             if (!string.IsNullOrWhiteSpace(treatmentPlan))
                             {
-                                var planItems = treatmentPlan.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                                var planItems = treatmentPlan.Split(
+                                    ',',
+                                    StringSplitOptions.RemoveEmptyEntries |
+                                    StringSplitOptions.TrimEntries);
                                 if (planItems.Any())
                                 {
-                                    content.Item().PaddingTop(20).Text("TREATMENT PLAN").FontSize(13).SemiBold().FontColor(Colors.Blue.Darken2);
-                                    content.Item().PaddingTop(5).Column(plan => 
+                                    content.Item().PaddingTop(20).Text("TREATMENT PLAN")
+                                        .FontSize(13).SemiBold().FontColor(Colors.Blue.Darken2);
+                                    content.Item().PaddingTop(5).Column(plan =>
                                     {
                                         foreach (var item in planItems)
                                         {
@@ -189,8 +199,10 @@ public class MedicalReportExporter
                             // Observations Section
                             if (!string.IsNullOrWhiteSpace(observations))
                             {
-                                content.Item().PaddingTop(20).Text("OBSERVATIONS").FontSize(13).SemiBold().FontColor(Colors.Blue.Darken2);
-                                content.Item().PaddingTop(5).Text(observations).FontSize(11).LineHeight(1.5f);
+                                content.Item().PaddingTop(20).Text("OBSERVATIONS").FontSize(13)
+                                    .SemiBold().FontColor(Colors.Blue.Darken2);
+                                content.Item().PaddingTop(5).Text(observations).FontSize(11)
+                                    .LineHeight(1.5f);
                             }
                         });
 

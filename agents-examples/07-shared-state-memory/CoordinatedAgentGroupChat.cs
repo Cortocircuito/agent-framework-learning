@@ -426,3 +426,17 @@ public class CoordinatedAgentGroupChat
         }
     }
 }
+
+/// <summary>
+/// Represents a message from an agent in the group chat.
+/// </summary>
+/// <param name="AuthorName">Name of the agent or user who sent the message</param>
+/// <param name="Text">Message content</param>
+/// <param name="isStreaming">True if this is a streaming chunk, false if complete message</param>
+/// <param name="isComplete">True if this marks the end of an agent's turn</param>
+public record AgentMessage(
+    string AuthorName,
+    string Text,
+    bool isStreaming = false,
+    bool isComplete = false
+);

@@ -141,11 +141,11 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
         [Description("The patient's full name")] string fullName,
         [Description("Room number or identifier (optional)")] string? room = null,
         [Description("Patient age in years (optional)")] int? age = null,
-        [Description("Comma-separated list of medical history acronyms (e.g., 'HTA, DL, ICC') (optional)")] string? medicalHistory = null,
+        [Description("Comma-separated list of chronic conditions as acronyms (HTA, DL, ICC, etc.), allergies (e.g. Allergy:Penicillin), and ongoing medications (e.g. Med:Metformin) (optional)")] string? medicalHistory = null,
         [Description("Full-text current diagnosis - NO acronyms (optional)")] string? currentDiagnosis = null,
         [Description("Clinical evolution: Good, Stable, or Bad (optional)")] string? evolution = null,
         [Description("Comma-separated list of treatment plan items (optional)")] string? treatmentPlan = null,
-        [Description("Additional clinical observations (optional)")] string? observations = null)
+        [Description("Any clinical information that does not fit in the other fields (e.g. vital signs, social/family history, pending results, contextual notes). Must NOT include allergies or medications (those belong in medicalHistory) (optional)")] string? observations = null)
     {
         // Input validation
         if (string.IsNullOrWhiteSpace(fullName))
