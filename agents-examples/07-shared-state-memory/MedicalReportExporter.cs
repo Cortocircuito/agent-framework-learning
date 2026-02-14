@@ -17,13 +17,15 @@ public class MedicalReportExporter
     public string SaveReportToPdf(
         [Description("The full text content of the medical report")]
         string reportContent,
-        [Description("The patient's actual full name extracted from the conversation (e.g., 'Juan Palomo', 'Herbert Heartstone'). Use 'Unknown_Patient' ONLY if no name was provided in the conversation.")]
+        [Description("The patient's actual full name extracted from the conversation")]
         string patientName = "Unknown_Patient",
-        [Description("Date of Birth")] string? dob = null,
-        [Description("Room Number")] string? room = null,
-        [Description("Emergency Contact")] string? contact = null,
-        [Description("List of treatment plan items")] List<string>? treatmentPlan = null,
-        [Description("List of next steps")] List<string>? nextSteps = null)
+        [Description("Room number or identifier")] string? room = null,
+        [Description("Patient age")] int? age = null,
+        [Description("Comma-separated medical history acronyms")] string? medicalHistory = null,
+        [Description("Full-text current diagnosis")] string? currentDiagnosis = null,
+        [Description("Clinical evolution: Good, Stable, or Bad")] string? evolution = null,
+        [Description("Comma-separated treatment plan items")] string? treatmentPlan = null,
+        [Description("Additional observations")] string? observations = null)
     {
         try
         {
@@ -101,21 +103,25 @@ public class MedicalReportExporter
                                 txt.Span("Name: ").SemiBold();
                                 txt.Span(patientName).FontColor(Colors.Blue.Darken2);
                             });
-                            patientBox.Item().Text(txt =>
+                            
+                            if (!string.IsNullOrWhiteSpace(room))
                             {
-                                txt.Span("DOB: ").SemiBold();
-                                txt.Span(dob ?? "N/A").FontColor(Colors.Blue.Darken2);
-                            });
-                            patientBox.Item().Text(txt =>
+                                patientBox.Item().Text(txt =>
+                                {
+                                    txt.Span("Room: ").SemiBold();
+                                    txt.Span(room).FontColor(Colors.Blue.Darken2);
+                                });
+                            }
+                            
+                            if (age.HasValue)
                             {
-                                txt.Span("Room: ").SemiBold();
-                                txt.Span(room ?? "N/A").FontColor(Colors.Blue.Darken2);
-                            });
-                            patientBox.Item().Text(txt =>
-                            {
-                                txt.Span("Emergency Contact: ").SemiBold();
-                                txt.Span(contact ?? "N/A").FontColor(Colors.Blue.Darken2);
-                            });
+                                patientBox.Item().Text(txt =>
+                                {
+                                    txt.Span("Age: ").SemiBold();
+                                    txt.Span(age.ToString()).FontColor(Colors.Blue.Darken2);
+                                });
+                            }
+                            
                             patientBox.Item().PaddingTop(5).Text(txt =>
                             {
                                 txt.Span("Report Date: ").SemiBold();
@@ -129,45 +135,62 @@ public class MedicalReportExporter
                             content.Item().Text("CLINICAL REPORT").FontSize(14).SemiBold().FontColor(Colors.Blue.Darken2);
                             content.Item().PaddingTop(2).LineHorizontal(1).LineColor(Colors.Blue.Darken2);
 
+                            // Medical History Section
+                            if (!string.IsNullOrWhiteSpace(medicalHistory))
+                            {
+                                content.Item().PaddingTop(15).Text("MEDICAL HISTORY (AP)").FontSize(12).SemiBold().FontColor(Colors.Blue.Darken2);
+                                content.Item().PaddingTop(5).Text(medicalHistory).FontSize(11);
+                            }
+
+                            // Current Diagnosis Section
+                            if (!string.IsNullOrWhiteSpace(currentDiagnosis))
+                            {
+                                content.Item().PaddingTop(15).Text("CURRENT DIAGNOSIS (Dx)").FontSize(12).SemiBold().FontColor(Colors.Blue.Darken2);
+                                content.Item().PaddingTop(5).Text(currentDiagnosis).FontSize(11).LineHeight(1.5f);
+                            }
+
+                            // Evolution Status Section
+                            if (!string.IsNullOrWhiteSpace(evolution))
+                            {
+                                content.Item().PaddingTop(15).Text("EVOLUTION").FontSize(12).SemiBold().FontColor(Colors.Blue.Darken2);
+                                content.Item().PaddingTop(5).Background(GetEvolutionColor(evolution)).Padding(10).Text(evolution)
+                                    .FontSize(11)
+                                    .SemiBold()
+                                    .FontColor(Colors.White);
+                            }
+
+                            // Clinical Report Content
                             content.Item().PaddingTop(15).Text(reportContent)
                                 .FontSize(11)
                                 .LineHeight(1.5f)
                                 .Justify();
 
                             // Treatment Plan Section
-                            if (treatmentPlan != null && treatmentPlan.Any())
+                            if (!string.IsNullOrWhiteSpace(treatmentPlan))
                             {
-                                content.Item().PaddingTop(20).Text("TREATMENT PLAN").FontSize(13).SemiBold().FontColor(Colors.Blue.Darken2);
-                                content.Item().PaddingTop(5).Column(plan => 
+                                var planItems = treatmentPlan.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                                if (planItems.Any())
                                 {
-                                    foreach (var item in treatmentPlan)
+                                    content.Item().PaddingTop(20).Text("TREATMENT PLAN").FontSize(13).SemiBold().FontColor(Colors.Blue.Darken2);
+                                    content.Item().PaddingTop(5).Column(plan => 
                                     {
-                                        plan.Item().PaddingBottom(5).Row(row =>
+                                        foreach (var item in planItems)
                                         {
-                                            row.ConstantItem(15).Text("•");
-                                            row.RelativeItem().Text(item);
-                                        });
-                                    }
-                                });
+                                            plan.Item().PaddingBottom(5).Row(row =>
+                                            {
+                                                row.ConstantItem(15).Text("•");
+                                                row.RelativeItem().Text(item);
+                                            });
+                                        }
+                                    });
+                                }
                             }
 
-                            // Next Steps Section
-                            if (nextSteps != null && nextSteps.Any())
+                            // Observations Section
+                            if (!string.IsNullOrWhiteSpace(observations))
                             {
-                                content.Item().PaddingTop(20).Text("NEXT STEPS").FontSize(13).SemiBold().FontColor(Colors.Blue.Darken2);
-                                content.Item().PaddingTop(5).Column(steps => 
-                                {
-                                    int stepNum = 1;
-                                    foreach (var item in nextSteps)
-                                    {
-                                        steps.Item().PaddingBottom(5).Row(row =>
-                                        {
-                                            row.ConstantItem(20).Text($"{stepNum}.");
-                                            row.RelativeItem().Text(item);
-                                        });
-                                        stepNum++;
-                                    }
-                                });
+                                content.Item().PaddingTop(20).Text("OBSERVATIONS").FontSize(13).SemiBold().FontColor(Colors.Blue.Darken2);
+                                content.Item().PaddingTop(5).Text(observations).FontSize(11).LineHeight(1.5f);
                             }
                         });
 
@@ -245,5 +268,19 @@ public class MedicalReportExporter
 
         // Ensure we have a valid result
         return string.IsNullOrWhiteSpace(sanitized) ? "Unknown_Patient" : sanitized;
+    }
+
+    /// <summary>
+    /// Returns background color based on evolution status.
+    /// </summary>
+    private static string GetEvolutionColor(string evolution)
+    {
+        return evolution.ToLower() switch
+        {
+            "good" => Colors.Green.Medium,
+            "stable" => Colors.Orange.Medium,
+            "bad" => Colors.Red.Medium,
+            _ => Colors.Grey.Medium
+        };
     }
 }

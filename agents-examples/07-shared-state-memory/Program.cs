@@ -66,7 +66,7 @@ try
         name: "ClinicalDataExtractor",
         instructions: """
                       You are a medical data analyst specializing in clinical note extraction.
-                      Your only task is to extract diagnoses, symptoms, and treatments from messy clinical notes.
+                      Your task is to extract structured clinical metadata from messy clinical notes.
                       Always provide a technical summary focused on the medical facts.
 
                       YOUR ROLE:
@@ -76,16 +76,23 @@ try
 
                       OUTPUT FORMAT (always use this exact structure so MedicalSecretary can parse it):
                       Patient: [full name]
-                      Conditions: [comma-separated diagnoses/conditions, or "none identified"]
-                      Allergies: [comma-separated, or "none mentioned"]
-                      Medications: [comma-separated, or "none mentioned"]
-                      Blood Type: [if mentioned, otherwise omit this line]
-                      Date of Birth: [if mentioned, otherwise omit this line]
-                      Room Number: [if mentioned, otherwise omit this line]
-                      Emergency Contact: [if mentioned, otherwise omit this line]
-                      Treatment Plan: [bullet list, if mentioned]
-                      Next Steps: [numbered list, if mentioned]
+                      Room: [room number/identifier, or "not mentioned" if not in notes]
+                      Age: [numeric age, or "not mentioned" if not in notes]
+                      Medical History (AP): [comma-separated acronyms ONLY: HTA, DL, ICC, FA, DM, COPD, etc.]
+                      Current Diagnosis (Dx): [full-text description, NO acronyms - spell everything out]
+                      Evolution: [Good | Stable | Bad - assess patient's clinical trajectory]
+                      Treatment Plan: [comma-separated list of ANY treatment items, procedures, or actions mentioned]
+                        Examples: "Pending Labs - CBC, BMP", "CT scan scheduled", "Cardiology consult", 
+                        "Start IV antibiotics", "Adjust insulin", "Physical therapy", etc.
+                        Extract whatever treatment-related items you find in the notes.
+                      Observations: [additional clinical notes, concerns, or context]
                       Clinical Summary: [2-3 sentence clinical assessment]
+
+                      CRITICAL RULES:
+                      - Medical History (AP): ONLY acronyms (HTA, DL, ICC, etc.)
+                      - Current Diagnosis (Dx): FULL TEXT, NO acronyms (spell out everything)
+                      - Evolution: Must be exactly "Good", "Stable", or "Bad"
+                      - Treatment Plan: Be flexible - extract any treatment items mentioned
 
                       Always end your response with "Analysis complete."
                       """
@@ -98,26 +105,32 @@ try
 
                       YOUR TOOLS:
                       - GetPatientData: Retrieve patient record from database
-                      - UpsertPatientData: Create or update patient record
+                      - UpsertPatientRecord: Create or update patient record
                       - SaveReportToPdf: Generate a PDF medical report
 
-                      Rules for Data Handling:
-                      - Extract `treatmentPlan` (bullet list) and `nextSteps` (numbered list) from the discussion.
-                      - Extract `dob`, `room`, and `emergencyContact` if present.
-                      - Pass `treatmentPlan` and `nextSteps` ONLY to `SaveReportToPdf` (they are ephemeral).
-                      - Pass `dob`, `room`, `emergencyContact` to BOTH `UpsertPatientData` and `SaveReportToPdf`.
+                      PARSING RULES:
+                      When ClinicalDataExtractor provides structured output, extract:
+                      - Patient name (required)
+                      - Room (optional)
+                      - Age (optional, numeric)
+                      - Medical History (AP): comma-separated acronyms → parse to list
+                      - Current Diagnosis (Dx): full text
+                      - Evolution: "Good", "Stable", or "Bad" → pass as-is
+                      - Treatment Plan: comma-separated items → parse to list
+                      - Observations: full text
 
                       MANDATORY DOCUMENTATION WORKFLOW:
                       1. Call GetPatientData with the patient's name
-                      2. Call UpsertPatientData with new findings (conditions, meds, allergies, DOB, room, contact)
-                      3. Call SaveReportToPdf with ALL data (including treatment plan and next steps)
+                      2. Call UpsertPatientRecord with extracted data:
+                         - fullName, room, age, medicalHistory, currentDiagnosis, evolution, treatmentPlan, observations
+                      3. Call SaveReportToPdf with the same data for PDF generation
 
                       Signal completion with "TASK_COMPLETE: Report saved."
                       """,
         tools:
         [
             AIFunctionFactory.Create(patientRegistry.GetPatientData),
-            AIFunctionFactory.Create(patientRegistry.UpsertPatientData),
+            AIFunctionFactory.Create(patientRegistry.UpsertPatientRecord),
             AIFunctionFactory.Create(exporter.SaveReportToPdf)
         ]
     );

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 
 namespace _07_shared_state_memory;
@@ -11,7 +12,7 @@ namespace _07_shared_state_memory;
 public class PatientRegistry(string connectionString = "Data Source=hospital.db")
 {
     /// <summary>
-    /// Initializes the database, creating the Patients table if it doesn't exist.
+    /// Initializes the database, creating the Patients table with the new schema.
     /// Call this once at application startup.
     /// </summary>
     public void Initialize()
@@ -19,39 +20,29 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
         using var connection = new SqliteConnection(connectionString);
         connection.Open();
 
+        // Drop old table if exists and create new schema
         var command = connection.CreateCommand();
         command.CommandText = """
-            CREATE TABLE IF NOT EXISTS Patients (
-                Name TEXT PRIMARY KEY,
-                Conditions TEXT,
-                Allergies TEXT,
-                Medications TEXT,
-                BloodType TEXT,
-                LastVisit TEXT,
-                DateOfBirth TEXT,
-                RoomNumber TEXT,
-                EmergencyContact TEXT
+            DROP TABLE IF EXISTS Patients;
+            
+            CREATE TABLE Patients (
+                FullName TEXT PRIMARY KEY,
+                Room TEXT,
+                Age INTEGER,
+                MedicalHistory TEXT,
+                CurrentDiagnosis TEXT,
+                Evolution INTEGER,
+                TreatmentPlan TEXT,
+                Observations TEXT
             )
             """;
         command.ExecuteNonQuery();
-
-        // Migration: Attempt to add new columns if they don't exist (swallow errors if they do)
-        try { CreateCommand(connection, "ALTER TABLE Patients ADD COLUMN DateOfBirth TEXT").ExecuteNonQuery(); } catch {}
-        try { CreateCommand(connection, "ALTER TABLE Patients ADD COLUMN RoomNumber TEXT").ExecuteNonQuery(); } catch {}
-        try { CreateCommand(connection, "ALTER TABLE Patients ADD COLUMN EmergencyContact TEXT").ExecuteNonQuery(); } catch {}
-    }
-
-    private static SqliteCommand CreateCommand(SqliteConnection connection, string text)
-    {
-        var cmd = connection.CreateCommand();
-        cmd.CommandText = text;
-        return cmd;
     }
 
     /// <summary>
     /// Retrieves the complete medical record for a patient from the database.
     /// </summary>
-    [Description("Retrieves the permanent medical record for a patient from the database. Returns patient data including conditions, allergies, medications, and blood type.")]
+    [Description("Retrieves the permanent medical record for a patient from the database. Returns patient data including room, age, medical history, diagnosis, evolution, treatment plan, and observations.")]
     public string GetPatientData(
         [Description("The patient's full name to search for")] string name)
     {
@@ -61,43 +52,25 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
 
         try
         {
-            using var connection = new SqliteConnection(connectionString);
-            connection.Open();
+            var record = GetPatientRecord(name);
+            
+            if (record == null)
+                return $"No patient record found for '{name}'. This appears to be a new patient.";
 
-            var command = connection.CreateCommand();
-            command.CommandText = """
-                SELECT Name, Conditions, Allergies, Medications, BloodType, LastVisit, DateOfBirth, RoomNumber, EmergencyContact
-                FROM Patients
-                WHERE Name = @name COLLATE NOCASE
+            // Format for display
+            var result = $"""
+                Patient: {record.FullName}
+                Room: {record.Room ?? "Not assigned"}
+                Age: {(record.Age.HasValue ? record.Age.ToString() : "Unknown")}
+                Medical History (AP): {(record.MedicalHistory?.Any() == true ? string.Join(", ", record.MedicalHistory) : "None recorded")}
+                Current Diagnosis (Dx): {record.CurrentDiagnosis ?? "Not documented"}
+                Evolution: {(record.Evolution.HasValue ? record.Evolution.ToString() : "Not assessed")}
+                Treatment Plan:
+                {FormatTreatmentPlan(record.TreatmentPlan)}
+                Observations: {record.Observations ?? "None"}
                 """;
-            command.Parameters.AddWithValue("@name", name);
 
-            using var reader = command.ExecuteReader();
-            if (reader.Read())
-            {
-                var conditions = reader.IsDBNull(1) ? "None recorded" : reader.GetString(1);
-                var allergies = reader.IsDBNull(2) ? "None recorded" : reader.GetString(2);
-                var medications = reader.IsDBNull(3) ? "None recorded" : reader.GetString(3);
-                var bloodType = reader.IsDBNull(4) ? "Unknown" : reader.GetString(4);
-                var lastVisit = reader.IsDBNull(5) ? "N/A" : reader.GetString(5);
-                var dob = reader.IsDBNull(6) ? "Unknown" : reader.GetString(6);
-                var room = reader.IsDBNull(7) ? "Unknown" : reader.GetString(7);
-                var contact = reader.IsDBNull(8) ? "Unknown" : reader.GetString(8);
-
-                return $"""
-                    Patient: {reader.GetString(0)}
-                    DOB: {dob}
-                    Room: {room}
-                    Emergency Contact: {contact}
-                    Blood Type: {bloodType}
-                    Conditions: {conditions}
-                    Allergies: {allergies}
-                    Medications: {medications}
-                    Last Visit: {lastVisit}
-                    """;
-            }
-
-            return $"No patient record found for '{name}'. This appears to be a new patient.";
+            return result;
         }
         catch (SqliteException ex)
         {
@@ -110,46 +83,12 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
     }
 
     /// <summary>
-    /// Creates or updates a patient's medical record in the database.
-    /// Uses UPSERT pattern (ON CONFLICT DO UPDATE) for safe concurrent updates.
+    /// Retrieves a strongly-typed patient record from the database.
     /// </summary>
-    [Description(
-        "Creates or updates a patient's medical record in the database. Use this when ClinicalDataExtractor identifies new conditions, allergies, or medications.")]
-    public string UpsertPatientData(
-        [Description("The patient's full name")] string name,
-        [Description(
-            "Comma-separated list of medical conditions/diagnoses (e.g., 'diabetes, hypertension')")]
-        string conditions,
-        [Description("Comma-separated list of known allergies (e.g., 'penicillin, peanuts')")]
-        string allergies,
-        [Description("Comma-separated list of current medications (optional)")]
-        string? medications = null,
-        [Description("Blood type if known (e.g., 'A+', 'O-') (optional)")]
-        string? bloodType = null,
-        [Description("Date of Birth (optional)")]
-        string? dob = null,
-        [Description("Room Number (optional)")]
-        string? room = null,
-        [Description("Emergency Contact Name/Relation (optional)")]
-        string? emergencyContact = null)
+    public PatientRecord? GetPatientRecord(string name)
     {
-        // Input validation
         if (string.IsNullOrWhiteSpace(name))
-            return "Error: Patient name cannot be empty.";
-
-        if (name.Length > 100)
-            return "Error: Patient name too long (max 100 characters).";
-
-        if (string.IsNullOrWhiteSpace(conditions) && string.IsNullOrWhiteSpace(allergies))
-            return "Error: Must provide at least one of: conditions or allergies.";
-
-        // Validate blood type format if provided
-        if (!string.IsNullOrWhiteSpace(bloodType))
-        {
-            var validBloodTypes = new[] { "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-" };
-            if (!validBloodTypes.Contains(bloodType.ToUpper()))
-                return $"Error: Invalid blood type '{bloodType}'. Must be one of: {string.Join(", ", validBloodTypes)}";
-        }
+            return null;
 
         try
         {
@@ -158,39 +97,159 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
 
             var command = connection.CreateCommand();
             command.CommandText = """
-                INSERT INTO Patients (Name, Conditions, Allergies, Medications, BloodType, LastVisit, DateOfBirth, RoomNumber, EmergencyContact)
-                VALUES (@name, @conditions, @allergies, @medications, @bloodType, @lastVisit, @dob, @room, @contact)
-                ON CONFLICT(Name) DO UPDATE SET
-                    Conditions = COALESCE(@conditions, Conditions),
-                    Allergies = COALESCE(@allergies, Allergies),
-                    Medications = COALESCE(@medications, Medications),
-                    BloodType = COALESCE(@bloodType, BloodType),
-                    DateOfBirth = COALESCE(@dob, DateOfBirth),
-                    RoomNumber = COALESCE(@room, RoomNumber),
-                    EmergencyContact = COALESCE(@contact, EmergencyContact),
-                    LastVisit = @lastVisit
+                SELECT FullName, Room, Age, MedicalHistory, CurrentDiagnosis, Evolution, TreatmentPlan, Observations
+                FROM Patients
+                WHERE FullName = @name COLLATE NOCASE
                 """;
-            
             command.Parameters.AddWithValue("@name", name);
-            command.Parameters.AddWithValue("@dob", string.IsNullOrWhiteSpace(dob) ? DBNull.Value : (object)dob);
-            command.Parameters.AddWithValue("@room", string.IsNullOrWhiteSpace(room) ? DBNull.Value : (object)room);
-            command.Parameters.AddWithValue("@contact", string.IsNullOrWhiteSpace(emergencyContact) ? DBNull.Value : (object)emergencyContact);
-            // Convert empty strings to DBNull to prevent wiping existing data
-            command.Parameters.AddWithValue("@conditions",
-                string.IsNullOrWhiteSpace(conditions) ? DBNull.Value : (object)conditions);
-            command.Parameters.AddWithValue("@allergies",
-                string.IsNullOrWhiteSpace(allergies) ? DBNull.Value : (object)allergies);
-            command.Parameters.AddWithValue("@medications",
-                string.IsNullOrWhiteSpace(medications) ? DBNull.Value : (object)medications);
-            command.Parameters.AddWithValue("@bloodType",
-                string.IsNullOrWhiteSpace(bloodType) ? DBNull.Value : (object)bloodType);
-            command.Parameters.AddWithValue("@lastVisit", DateTime.Now.ToString("O"));
+
+            using var reader = command.ExecuteReader();
+            if (reader.Read())
+            {
+                return new PatientRecord(
+                    FullName: reader.GetString(0),
+                    Room: reader.IsDBNull(1) ? null : reader.GetString(1),
+                    Age: reader.IsDBNull(2) ? null : reader.GetInt32(2),
+                    MedicalHistory: reader.IsDBNull(3) ? null : JsonSerializer.Deserialize<List<string>>(reader.GetString(3)),
+                    CurrentDiagnosis: reader.IsDBNull(4) ? null : reader.GetString(4),
+                    Evolution: reader.IsDBNull(5) ? null : (Evolution)reader.GetInt32(5),
+                    TreatmentPlan: reader.IsDBNull(6) ? null : JsonSerializer.Deserialize<List<string>>(reader.GetString(6)),
+                    Observations: reader.IsDBNull(7) ? null : reader.GetString(7)
+                );
+            }
+
+            return null;
+        }
+        catch (SqliteException ex)
+        {
+            Console.WriteLine($"Database error: {ex.Message}");
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"JSON deserialization error: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Creates or updates a patient's medical record in the database.
+    /// Uses UPSERT pattern (ON CONFLICT DO UPDATE) for safe concurrent updates.
+    /// </summary>
+    [Description("Creates or updates a patient's medical record in the database. Use this when ClinicalDataExtractor identifies patient information.")]
+    public string UpsertPatientRecord(
+        [Description("The patient's full name")] string fullName,
+        [Description("Room number or identifier (optional)")] string? room = null,
+        [Description("Patient age in years (optional)")] int? age = null,
+        [Description("Comma-separated list of medical history acronyms (e.g., 'HTA, DL, ICC') (optional)")] string? medicalHistory = null,
+        [Description("Full-text current diagnosis - NO acronyms (optional)")] string? currentDiagnosis = null,
+        [Description("Clinical evolution: Good, Stable, or Bad (optional)")] string? evolution = null,
+        [Description("Comma-separated list of treatment plan items (optional)")] string? treatmentPlan = null,
+        [Description("Additional clinical observations (optional)")] string? observations = null)
+    {
+        // Input validation
+        if (string.IsNullOrWhiteSpace(fullName))
+            return "Error: Patient name cannot be empty.";
+
+        if (fullName.Length > 100)
+            return "Error: Patient name too long (max 100 characters).";
+
+        try
+        {
+            // Parse evolution enum
+            Evolution? evolutionEnum = null;
+            if (!string.IsNullOrWhiteSpace(evolution))
+            {
+                if (Enum.TryParse<Evolution>(evolution, ignoreCase: true, out var parsed))
+                    evolutionEnum = parsed;
+                else
+                    return $"Error: Invalid evolution value '{evolution}'. Must be: Good, Stable, or Bad.";
+            }
+
+            // Parse medical history
+            List<string>? medicalHistoryList = null;
+            if (!string.IsNullOrWhiteSpace(medicalHistory))
+            {
+                medicalHistoryList = medicalHistory
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .ToList();
+            }
+
+            // Parse treatment plan
+            List<string>? treatmentPlanList = null;
+            if (!string.IsNullOrWhiteSpace(treatmentPlan))
+            {
+                treatmentPlanList = treatmentPlan
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .ToList();
+            }
+
+            // Create record
+            var record = new PatientRecord(
+                FullName: fullName,
+                Room: room,
+                Age: age,
+                MedicalHistory: medicalHistoryList,
+                CurrentDiagnosis: currentDiagnosis,
+                Evolution: evolutionEnum,
+                TreatmentPlan: treatmentPlanList,
+                Observations: observations
+            );
+
+            // Validate
+            if (!record.IsValid(out var validationError))
+                return $"Error: {validationError}";
+
+            // Save to database
+            return UpsertPatientRecord(record);
+        }
+        catch (Exception ex)
+        {
+            return $"Error saving patient data: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Creates or updates a patient record using the strongly-typed PatientRecord.
+    /// </summary>
+    private string UpsertPatientRecord(PatientRecord record)
+    {
+        try
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = """
+                INSERT INTO Patients (FullName, Room, Age, MedicalHistory, CurrentDiagnosis, Evolution, TreatmentPlan, Observations)
+                VALUES (@fullName, @room, @age, @medicalHistory, @currentDiagnosis, @evolution, @treatmentPlan, @observations)
+                ON CONFLICT(FullName) DO UPDATE SET
+                    Room = COALESCE(@room, Room),
+                    Age = COALESCE(@age, Age),
+                    MedicalHistory = COALESCE(@medicalHistory, MedicalHistory),
+                    CurrentDiagnosis = COALESCE(@currentDiagnosis, CurrentDiagnosis),
+                    Evolution = COALESCE(@evolution, Evolution),
+                    TreatmentPlan = COALESCE(@treatmentPlan, TreatmentPlan),
+                    Observations = COALESCE(@observations, Observations)
+                """;
+
+            command.Parameters.AddWithValue("@fullName", record.FullName);
+            command.Parameters.AddWithValue("@room", (object?)record.Room ?? DBNull.Value);
+            command.Parameters.AddWithValue("@age", record.Age.HasValue ? record.Age.Value : DBNull.Value);
+            command.Parameters.AddWithValue("@medicalHistory", 
+                record.MedicalHistory?.Any() == true ? JsonSerializer.Serialize(record.MedicalHistory) : DBNull.Value);
+            command.Parameters.AddWithValue("@currentDiagnosis", (object?)record.CurrentDiagnosis ?? DBNull.Value);
+            command.Parameters.AddWithValue("@evolution", 
+                record.Evolution.HasValue ? (int)record.Evolution.Value : DBNull.Value);
+            command.Parameters.AddWithValue("@treatmentPlan", 
+                record.TreatmentPlan?.Any() == true ? JsonSerializer.Serialize(record.TreatmentPlan) : DBNull.Value);
+            command.Parameters.AddWithValue("@observations", (object?)record.Observations ?? DBNull.Value);
 
             var rowsAffected = command.ExecuteNonQuery();
-            
+
             return rowsAffected > 0
-                ? $"Success: Patient record for '{name}' has been saved to the database."
-                : $"Warning: No changes made to patient record for '{name}'.";
+                ? $"Success: Patient record for '{record.FullName}' has been saved to the database."
+                : $"Warning: No changes made to patient record for '{record.FullName}'.";
         }
         catch (SqliteException ex) when (ex.SqliteErrorCode == 19) // UNIQUE constraint
         {
@@ -218,9 +277,9 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
 
             var command = connection.CreateCommand();
             command.CommandText = """
-                SELECT Name, Conditions, LastVisit
+                SELECT FullName, Room, Age, Evolution
                 FROM Patients
-                ORDER BY LastVisit DESC
+                ORDER BY FullName
                 """;
 
             using var reader = command.ExecuteReader();
@@ -237,12 +296,12 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
             {
                 count++;
                 var name = reader.GetString(0);
-                var conditions = reader.IsDBNull(1) ? "No conditions recorded" : reader.GetString(1);
-                var lastVisit = reader.IsDBNull(2) ? "Never" : reader.GetString(2);
+                var room = reader.IsDBNull(1) ? "N/A" : reader.GetString(1);
+                var age = reader.IsDBNull(2) ? "N/A" : reader.GetInt32(2).ToString();
+                var evolution = reader.IsDBNull(3) ? "Not assessed" : ((Evolution)reader.GetInt32(3)).ToString();
 
                 result.AppendLine($"\n{count}. {name}");
-                result.AppendLine($"   Conditions: {conditions}");
-                result.AppendLine($"   Last Visit: {lastVisit}");
+                result.AppendLine($"   Room: {room} | Age: {age} | Evolution: {evolution}");
             }
 
             result.AppendLine($"\nTotal patients: {count}");
@@ -256,5 +315,16 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
         {
             return $"Error listing patients: {ex.Message}";
         }
+    }
+
+    /// <summary>
+    /// Formats treatment plan list for display.
+    /// </summary>
+    private static string FormatTreatmentPlan(List<string>? plan)
+    {
+        if (plan == null || !plan.Any())
+            return "  - None documented";
+
+        return string.Join("\n", plan.Select(item => $"  - {item}"));
     }
 }

@@ -51,7 +51,7 @@ public class CoordinatedAgentGroupChat
 
         var query = $"QUERY: Retrieve and display the complete medical record for patient '{patientName}'. " +
                     $"Call GetPatientData and present the information in a clear, readable format. " +
-                    $"Do NOT call UpsertPatientData or SaveReportToPdf.";
+                    $"Do NOT call UpsertPatientRecord or SaveReportToPdf.";
 
         yield return new AgentMessage("User", query);
 
@@ -115,7 +115,7 @@ public class CoordinatedAgentGroupChat
                     $"ClinicalDataExtractor has completed the medical analysis. " +
                     $"You MUST now execute these steps in order:\n" +
                     $"1. Call GetPatientData with the patient's name\n" +
-                    $"2. Call UpsertPatientData to save the new findings\n" +
+                    $"2. Call UpsertPatientRecord to save the new findings\n" +
                     $"3. Call SaveReportToPdf to generate the PDF report\n\n" +
                     $"ClinicalDataExtractor's analysis:\n{currentContext}";
             }
