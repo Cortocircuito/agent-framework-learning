@@ -28,9 +28,9 @@ public class MedicalReportExporter
         string? currentDiagnosis = null,
         [Description("Clinical evolution: Good, Stable, or Bad")]
         string? evolution = null,
-        [Description("Comma-separated plan items")]
+        [Description("Comma-separated list of plan items: active treatments, medication adjustments, pending labs/microbiology/radiology/procedures, surgeries, specialist consultations, rehabilitation, discharge, transfer, or repatriation")]
         string? plan = null,
-        [Description("Any clinical information that does not fit in the other fields (e.g. vital signs, social/family history, contextual notes). Must NOT include allergies or medications (those belong in medicalHistory) or pending results (those belong in plan)")]
+        [Description("Any clinical information that does not fit in the other fields (e.g. vital signs, social/family history, contextual notes). Must NOT include allergies or medications (those belong in medicalHistory), pending/scheduled/ordered items (those belong in plan), or anything already in currentDiagnosis")]
         string? observations = null)
     {
         try
