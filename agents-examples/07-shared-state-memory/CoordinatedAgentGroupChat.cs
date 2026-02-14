@@ -13,25 +13,21 @@ public class CoordinatedAgentGroupChat
     private readonly Dictionary<string, AIAgent> _specialists;
     private readonly int _maxTurns;
     private AgentThread? _thread;
-    private readonly bool _enableDiscussionMode;
 
     /// <summary>
     /// Creates a new coordinator-based agent group chat.
     /// </summary>
     /// <param name="coordinator">The coordinator agent that orchestrates the conversation</param>
     /// <param name="specialists">Dictionary of specialist agents (key = agent name for routing)</param>
-    /// <param name="maxTurns">Maximum discussion turns (default: 15 for multi-turn discussions)</param>
-    /// <param name="enableDiscussionMode">Allow extended multi-turn discussions (default: false)</param>
+    /// <param name="maxTurns">Maximum turns before forced termination (default: 15)</param>
     public CoordinatedAgentGroupChat(
         AIAgent coordinator,
         Dictionary<string, AIAgent> specialists,
-        int maxTurns = 15,
-        bool enableDiscussionMode = false)
+        int maxTurns = 15)
     {
         _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
         _specialists = specialists ?? throw new ArgumentNullException(nameof(specialists));
         _maxTurns = maxTurns;
-        _enableDiscussionMode = enableDiscussionMode;
 
         if (_specialists.Count == 0)
             throw new ArgumentException("At least one specialist agent is required", nameof(specialists));
@@ -149,32 +145,7 @@ public class CoordinatedAgentGroupChat
                 break;
         }
 
-        // Phase 3: Multi-turn discussion mode (if enabled)
-        if (_enableDiscussionMode && !shouldTerminate && requiredSpecialists.Count > 1)
-        {
-            yield return new AgentMessage(
-                "System",
-                "[Enabling multi-turn discussion mode...]",
-                isStreaming: false
-            );
-
-            await foreach (var message in RunDiscussionMode(currentContext, turnCount))
-            {
-                yield return message;
-
-                // Check termination in discussion messages
-                if (message.isComplete && ContainsTerminationKeyword(message.Text))
-                {
-                    shouldTerminate = true;
-                    break;
-                }
-
-                if (turnCount >= _maxTurns)
-                    break;
-            }
-        }
-
-        // Phase 4: Coordinator synthesis (optional final summary)
+        // Phase 3: Coordinator synthesis (optional final summary)
         if (!shouldTerminate && turnCount < _maxTurns)
         {
             yield return new AgentMessage(
@@ -251,81 +222,6 @@ public class CoordinatedAgentGroupChat
                 isStreaming: false,
                 isComplete: true
             );
-        }
-    }
-
-    /// <summary>
-    /// Runs multi-turn discussion mode where specialists collaborate.
-    /// </summary>
-    private async IAsyncEnumerable<AgentMessage> RunDiscussionMode(
-        string initialContext,
-        int startingTurnCount)
-    {
-        int discussionTurns = 0;
-        int maxDiscussionTurns = _maxTurns - startingTurnCount;
-        string currentContext = initialContext;
-        bool discussionComplete = false;
-
-        // Round-robin discussion between specialists
-        // Enforce strict order: Chase -> Cameron -> Foreman -> House -> Secretary
-        var orderedNames = new List<string>
-            { "DrChase", "DraCameron", "DrForeman", "DrHouse", "MedicalSecretary" };
-
-        var specialistList = _specialists.Values
-            .OrderBy(a =>
-            {
-                var index = orderedNames.IndexOf(a.Name ?? "");
-                return index == -1 ? 999 : index; // Unknown agents go last
-            })
-            .ToList();
-
-        int specialistIndex = 0;
-
-        while (!discussionComplete && discussionTurns < maxDiscussionTurns)
-        {
-            var currentSpecialist = specialistList[specialistIndex];
-
-            // Specialist responds to current context
-            var responseBuilder = new System.Text.StringBuilder();
-
-            await foreach (var update in currentSpecialist.RunStreamingAsync(
-                $"Based on the discussion so far: {currentContext}\n\nProvide your input:",
-                _thread))
-            {
-                if (!string.IsNullOrEmpty(update.Text))
-                {
-                    responseBuilder.Append(update.Text);
-
-                    yield return new AgentMessage(
-                        currentSpecialist.Name ?? "Specialist",
-                        update.Text,
-                        isStreaming: true
-                    );
-                }
-            }
-
-            var fullResponse = responseBuilder.ToString();
-            if (!string.IsNullOrEmpty(fullResponse))
-            {
-                yield return new AgentMessage(
-                    currentSpecialist.Name ?? "Specialist",
-                    fullResponse,
-                    isStreaming: false,
-                    isComplete: true
-                );
-
-                currentContext += $"\n\n--- {currentSpecialist.Name} ---\n{fullResponse}";
-            }
-
-            // Check if discussion should end
-            if (ContainsTerminationKeyword(fullResponse) ||
-                ContainsUserQuestion(fullResponse))
-            {
-                discussionComplete = true;
-            }
-
-            specialistIndex = (specialistIndex + 1) % specialistList.Count;
-            discussionTurns++;
         }
     }
 
@@ -413,26 +309,6 @@ public class CoordinatedAgentGroupChat
         };
 
         return terminationPhrases.Any(phrase =>
-            response.Contains(phrase, StringComparison.OrdinalIgnoreCase));
-    }
-
-    /// <summary>
-    /// Checks if the response contains a question for the user.
-    /// </summary>
-    private static bool ContainsUserQuestion(string response)
-    {
-        if (string.IsNullOrWhiteSpace(response))
-            return false;
-
-        var questionIndicators = new[]
-        {
-            "please confirm",
-            "do you want",
-            "would you like",
-            "should i"
-        };
-
-        return questionIndicators.Any(phrase =>
             response.Contains(phrase, StringComparison.OrdinalIgnoreCase));
     }
 

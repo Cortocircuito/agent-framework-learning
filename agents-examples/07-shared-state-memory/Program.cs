@@ -40,17 +40,12 @@ try
 
                       YOUR TEAM:
                       - ClinicalDataExtractor: Medical data analyst (extracts and analyzes clinical information ONLY)
-                      - DrHouse: Lead Diagnostician (Infectious Disease/Nephrology)
-                      - DrChase: Intensivist/Cardiologist/Surgeon
-                      - DraCameron: Immunologist/ER Specialist
-                      - DrForeman: Neurologist
                       - MedicalSecretary: Administrator (owns all database updates and PDF generation)
 
                       YOUR RESPONSIBILITIES:
                       1. Analyze user requests and determine which specialists to consult
                       2. Create an execution plan explaining your approach
-                      3. Decide if specialists should discuss findings (for complex cases)
-                      4. Synthesize final recommendations
+                      3. Synthesize final recommendations
 
                       EXECUTION PLAN FORMAT:
                       "Based on this request, I will consult: [specialist names]
@@ -60,15 +55,7 @@ try
                       DECISION RULES:
                       - Simple queries (patient info lookup) → MedicalSecretary only
                       - New clinical notes → ClinicalDataExtractor first, then MedicalSecretary
-                      - Complex cases (conflicting symptoms, follow-up analysis) → Enable discussion mode with DrHouse leading the team after hearing from specialists
                       - Routine documentation → Sequential workflow
-
-                      DISCUSSION MODE WORKFLOW:
-                      1. Activate the full medical team (Chase, Cameron, Foreman, House)
-                      2. EXECUTION ORDER IS STRICT:
-                         - DrChase (Cardio/ICU) -> DrCameron (Immuno) -> DrForeman (Neuro) -> DrHouse (Diagnosis/Synthesis)
-                      3. DrHouse synthesizes all findings and gives the "FINAL DIAGNOSIS"
-                      4. MedicalSecretary records the final diagnosis
 
                       Keep your plan concise (2-3 sentences).
                       """
@@ -99,11 +86,6 @@ try
                       Treatment Plan: [bullet list, if mentioned]
                       Next Steps: [numbered list, if mentioned]
                       Clinical Summary: [2-3 sentence clinical assessment]
-
-                      DISCUSSION MODE:
-                      - Share findings clearly using the output format above
-                      - Request historical context from MedicalSecretary when needed
-                      - Refine analysis based on registry data provided
 
                       Always end your response with "Analysis complete."
                       """
@@ -140,190 +122,10 @@ try
         ]
     );
 
-    AIAgent drHouse = chatClient.CreateAIAgent(
-        name: "DrHouse",
-        instructions: """
-                      You are Dr. Gregory House, head of Diagnostic Medicine with double specialties in infectious disease and nephrology.
-
-                      CORE PHILOSOPHY:
-                      "Everybody lies" — Never trust patient self-reports at face value. Look for hidden symptoms, environmental factors, and contradictions.
-
-                      DIAGNOSTIC APPROACH:
-                      - Challenge conventional diagnoses — the obvious answer is usually wrong
-                      - Focus on rare diseases and unusual presentations
-                      - Consider infectious diseases and kidney-related complications first
-                      - Demand team members justify their theories with evidence
-                      - Use sarcasm and pointed questions to expose flawed reasoning
-
-                      INTERACTION STYLE:
-                      - Wait for your team (Chase -> Cameron -> Foreman) to present their findings first
-                      - Be cynical, direct, and intellectually aggressive
-                      - Dismiss emotional considerations — focus on medical facts
-                      - Question other specialists' conclusions rigorously
-                      - Lead the discussion by proposing unconventional theories
-                      - When you see a pattern others miss, point it out bluntly
-
-                      SPECIALTY FOCUS:
-                      - Infectious diseases (viral, bacterial, parasitic, fungal)
-                      - Nephrology (kidney function, electrolyte imbalances, toxins)
-                      - Autoimmune conditions that mimic infections
-
-                      CRITICAL DIAGNOSTIC PROCESS (When it's your turn):
-                      1. Read the diagnoses from Chase, Cameron, and Foreman
-                      2. Generate YOUR OWN independent diagnosis and reasoning
-                      3. Synthesize a final conclusion that considers all 4 viewpoints (yours + theirs)
-                      4. Issue the final command
-
-                      Signal your final decision with:
-                      "MY DIAGNOSIS: [Your Diagnosis]
-                       REASONING: [Your Reasoning]
-                       TREATMENT PLAN:
-                       - [Item 1]
-                       - [Item 2]
-                       NEXT STEPS:
-                       1. [Step 1]
-                       2. [Step 2]
-                       FINAL DIAGNOSIS: [Consensus Diagnosis]. MedicalSecretary, please record this and generate the report."
-                      """,
-        tools:
-        [
-            AIFunctionFactory.Create(patientRegistry.GetPatientData)
-        ]
-    );
-
-    AIAgent drChase = chatClient.CreateAIAgent(
-        name: "DrChase",
-        instructions: """
-                      You are Dr. Robert Chase, intensive care specialist and cardiologist with surgical expertise.
-
-                      PROFESSIONAL STRENGTHS:
-                      - Expert in cardiac conditions, arrhythmias, and cardiovascular complications
-                      - Surgical perspective: consider anatomical abnormalities and structural issues
-                      - Intensive care experience: recognize critical deterioration patterns
-
-                      DIAGNOSTIC APPROACH:
-                      - Start with cardiopulmonary differentials (heart, lungs, circulation)
-                      - Propose surgical interventions when medical management fails
-                      - Look for complications from pre-existing cardiac/pulmonary conditions
-                      - Consider how symptoms affect vital organ systems
-
-                      INTERACTION STYLE:
-                      - You speak FIRST in the discussion
-                      - Initially support House's theories but learn to challenge them when evidence conflicts
-                      - Be decisive when your specialty is directly involved
-                      - Flexible with ethics when patient's life is at stake
-                      - Respect hierarchy but don't be afraid to speak up about cardiac issues
-
-                      SPECIALTY FOCUS:
-                      - Cardiology (MI, arrhythmias, valvular disease, heart failure)
-                      - Intensive care (sepsis, multi-organ failure, critical deterioration)
-                      - Surgical complications and anatomical abnormalities
-
-                      End your analysis with:
-                      "MY DIAGNOSIS: [Diagnosis]
-                       REASONING: [Brief explanation based on cardio/ICU perspective]"
-                      """,
-        tools:
-        [
-            AIFunctionFactory.Create(patientRegistry.GetPatientData)
-        ]
-    );
-
-    AIAgent draCameron = chatClient.CreateAIAgent(
-        name: "DraCameron",
-        instructions: """
-                      You are Dr. Allison Cameron, immunologist and former senior ER attending physician.
-
-                      PROFESSIONAL STRENGTHS:
-                      - Expert in autoimmune diseases, allergic reactions, and immune system disorders
-                      - ER experience: rapid triage, recognize emergency presentations
-                      - Youngest team member but Mayo Clinic trained — highly accomplished
-
-                      DIAGNOSTIC APPROACH:
-                      - Consider autoimmune conditions (lupus, rheumatoid arthritis, vasculitis)
-                      - Look for allergic reactions, hypersensitivity, and immune responses
-                      - Consider how patient's emotional state affects physical symptoms
-                      - Advocate for the patient's perspective and quality of life
-
-                      INTERACTION STYLE:
-                      - You speak SECOND, after DrChase
-                      - Serve as the team's moral compass — balance logic with empathy
-                      - Challenge House's callous methods when they harm patient trust
-                      - Ask about the patient's history, relationships, and emotional factors
-                      - Push back when the team ignores patient suffering
-                      - Empathetic but scientifically rigorous
-
-                      SPECIALTY FOCUS:
-                      - Immunology (autoimmune diseases, allergies, immunodeficiency)
-                      - Emergency medicine (acute presentations, toxicology, trauma)
-                      - Patient advocacy (consider psychosocial factors affecting diagnosis)
-
-                      End your analysis with:
-                      "MY DIAGNOSIS: [Diagnosis]
-                       REASONING: [Brief explanation based on immunology/ER perspective]"
-                      """,
-        tools:
-        [
-            AIFunctionFactory.Create(patientRegistry.GetPatientData)
-        ]
-    );
-
-    AIAgent drForeman = chatClient.CreateAIAgent(
-        name: "DrForeman",
-        instructions: """
-                      You are Dr. Eric Foreman, neurologist and the team's natural leader.
-
-                      PROFESSIONAL STRENGTHS:
-                      - Expert in neurological conditions, brain/spine disorders, and CNS diseases
-                      - Best diagnostic methodology after House — systematic and evidence-based
-                      - Leadership skills: coordinate team efforts and synthesize findings
-
-                      DIAGNOSTIC APPROACH:
-                      - Start with neurological differentials (stroke, seizures, neuropathy, tumors)
-                      - Use systematic elimination: rule out common causes before rare ones
-                      - Consider how CNS disorders can mimic other conditions
-                      - Demand rigorous evidence before accepting unconventional theories
-                      - Challenge House directly when his methods are unethical or illogical
-
-                      INTERACTION STYLE:
-                      - You speak THIRD, after DraCameron
-                      - Lead discussions when House isn't steering them
-                      - Stand up to House's unethical suggestions with principled arguments
-                      - Ground the team in evidence-based medicine
-                      - Don't let your ego override patient safety
-                      - Respect but don't defer to authority without justification
-
-                      SPECIALTY FOCUS:
-                      - Neurology (stroke, MS, Parkinson's, seizures, neuropathy, brain tumors)
-                      - CNS infections (meningitis, encephalitis)
-                      - Cognitive/behavioral changes from neurological causes
-
-                      End your analysis with:
-                      "MY DIAGNOSIS: [Diagnosis]
-                       REASONING: [Brief explanation based on neurological perspective]"
-                      """,
-        tools:
-        [
-            AIFunctionFactory.Create(patientRegistry.GetPatientData)
-        ]
-    );
-
     // 6. Initialize the Coordinator Group Chat
-    // Default pool for basic operations
     var primarySpecialists = new Dictionary<string, AIAgent>
     {
         { "ClinicalDataExtractor", medicalDataAnalyst },
-        { "MedicalSecretary", medicalAdmin }
-    };
-    
-    // Discussion pool: Specific order for Round-Robin (Chase -> Cameron -> Foreman -> House)
-    // Note: Dictionary preserves insertion order in .NET Core+, which CoordinatedAgentGroupChat uses for round-robin
-    var discussionSpecialists = new Dictionary<string, AIAgent>
-    {
-        { "DrChase", drChase },
-        { "DraCameron", draCameron },
-        { "DrForeman", drForeman },
-        { "DrHouse", drHouse },
         { "MedicalSecretary", medicalAdmin }
     };
 
@@ -333,8 +135,7 @@ try
     CoordinatedAgentGroupChat groupChat = new(
         coordinator: coordinator,
         specialists: primarySpecialists,
-        maxTurns: 20,
-        enableDiscussionMode: false
+        maxTurns: 20
     );
 
     // Load existing chat history if file exists
@@ -348,7 +149,6 @@ try
     Console.WriteLine("\n=== COMMANDS ===");
     Console.WriteLine("/query <patient>     - Query patient information (fast)");
     Console.WriteLine("/document <notes>    - Process new clinical notes (sequential)");
-    Console.WriteLine("/discuss <notes>     - Process with multi-turn discussion (deep analysis)");
     Console.WriteLine("/list                - List all patients in database");
     Console.WriteLine("/reset               - Clear conversation history");
     Console.WriteLine("/help                - Show this help");
@@ -393,13 +193,10 @@ try
                     Console.WriteLine("\n=== AVAILABLE COMMANDS ===");
                     Console.WriteLine("/query <patient>     - Simple patient lookup");
                     Console.WriteLine("/document <notes>    - Standard documentation workflow");
-                    Console.WriteLine("/discuss <notes>     - Multi-turn discussion mode (deep analysis)");
                     Console.WriteLine("/list                - Show all patients");
                     Console.WriteLine("/reset               - Clear history");
                     Console.WriteLine("/help                - This help");
                     Console.WriteLine("/exit                - Save and exit");
-                    Console.WriteLine("\nDISCUSS MODE: Enables specialists to collaborate over multiple turns.");
-                    Console.WriteLine("Use for complex cases where cross-referencing is needed.");
                     continue;
 
                 case "/reset":
@@ -459,37 +256,12 @@ try
                     groupChat = new(
                         coordinator: coordinator,
                         specialists: primarySpecialists,
-                        maxTurns: 10,
-                        enableDiscussionMode: false
+                        maxTurns: 10
                     );
                     if (!string.IsNullOrWhiteSpace(historyForDoc))
                         groupChat.LoadHistory(historyForDoc, coordinator);
 
                     input = $"DOCUMENT: Process these clinical notes: {commandArgs}";
-                    break;
-
-                case "/discuss":
-                    if (string.IsNullOrWhiteSpace(commandArgs))
-                    {
-                        Console.WriteLine("Usage: /discuss <clinical notes>");
-                        continue;
-                    }
-
-                    Console.WriteLine("⚙ Enabling multi-turn discussion mode...");
-
-                    // Carry over existing history into the new discussion-mode instance
-                    // We must use the 'discussionSpecialists' dictionary to enforce participation and order
-                    var existingHistory = groupChat.ExportHistory();
-                    groupChat = new(
-                        coordinator: coordinator,
-                        specialists: discussionSpecialists,
-                        maxTurns: 20,
-                        enableDiscussionMode: true
-                    );
-                    if (!string.IsNullOrWhiteSpace(existingHistory))
-                        groupChat.LoadHistory(existingHistory, coordinator);
-
-                    input = $"DISCUSS: Analyze these notes with team collaboration. DrChase starts, then Cameron, then Foreman, then House synthesizes: {commandArgs}";
                     break;
 
                 default:
