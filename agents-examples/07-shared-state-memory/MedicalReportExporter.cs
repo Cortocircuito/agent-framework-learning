@@ -28,8 +28,8 @@ public class MedicalReportExporter
         string? currentDiagnosis = null,
         [Description("Clinical evolution: Good, Stable, or Bad")]
         string? evolution = null,
-        [Description("Comma-separated treatment plan items")]
-        string? treatmentPlan = null,
+        [Description("Comma-separated plan items")]
+        string? plan = null,
         [Description("Any clinical information that does not fit in the other fields (e.g. vital signs, social/family history, pending results, contextual notes). Must NOT include allergies or medications (those belong in medicalHistory)")]
         string? observations = null)
     {
@@ -171,16 +171,16 @@ public class MedicalReportExporter
                                     .FontColor(Colors.White);
                             }
 
-                            // Treatment Plan Section
-                            if (!string.IsNullOrWhiteSpace(treatmentPlan))
+                            // Plan Section
+                            if (!string.IsNullOrWhiteSpace(plan))
                             {
-                                var planItems = treatmentPlan.Split(
+                                var planItems = plan.Split(
                                     ',',
                                     StringSplitOptions.RemoveEmptyEntries |
                                     StringSplitOptions.TrimEntries);
                                 if (planItems.Any())
                                 {
-                                    content.Item().PaddingTop(20).Text("TREATMENT PLAN")
+                                    content.Item().PaddingTop(20).Text("PLAN")
                                         .FontSize(13).SemiBold().FontColor(Colors.Blue.Darken2);
                                     content.Item().PaddingTop(5).Column(plan =>
                                     {

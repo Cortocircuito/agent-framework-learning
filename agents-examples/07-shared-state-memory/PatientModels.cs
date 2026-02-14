@@ -12,7 +12,7 @@ namespace _07_shared_state_memory;
 /// <param name="MedicalHistory">List of medical history acronyms (AP): HTA, DL, ICC, FA, etc.</param>
 /// <param name="CurrentDiagnosis">Full-text current diagnosis (Dx) - NO acronyms allowed</param>
 /// <param name="Evolution">Clinical evolution status (Good, Stable, Bad)</param>
-/// <param name="TreatmentPlan">Flexible list of treatment items extracted by LLM from clinical notes</param>
+/// <param name="Plan">Flexible list of treatment items extracted by LLM from clinical notes</param>
 /// <param name="Observations">Additional clinical observations and notes</param>
 public record PatientRecord(
     string FullName,
@@ -21,7 +21,7 @@ public record PatientRecord(
     List<string>? MedicalHistory = null,
     string? CurrentDiagnosis = null,
     Evolution? Evolution = null,
-    List<string>? TreatmentPlan = null,
+    List<string>? Plan = null,
     string? Observations = null
 )
 {

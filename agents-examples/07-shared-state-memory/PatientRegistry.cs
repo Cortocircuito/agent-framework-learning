@@ -32,7 +32,7 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
                 MedicalHistory TEXT,
                 CurrentDiagnosis TEXT,
                 Evolution INTEGER,
-                TreatmentPlan TEXT,
+                Plan TEXT,
                 Observations TEXT
             )
             """;
@@ -42,7 +42,7 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
     /// <summary>
     /// Retrieves the complete medical record for a patient from the database.
     /// </summary>
-    [Description("Retrieves the permanent medical record for a patient from the database. Returns patient data including room, age, medical history, diagnosis, evolution, treatment plan, and observations.")]
+    [Description("Retrieves the permanent medical record for a patient from the database. Returns patient data including room, age, medical history, diagnosis, evolution, plan, and observations.")]
     public string GetPatientData(
         [Description("The patient's full name to search for")] string name)
     {
@@ -65,8 +65,8 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
                 Medical History (AP): {(record.MedicalHistory?.Any() == true ? string.Join(", ", record.MedicalHistory) : "None recorded")}
                 Current Diagnosis (Dx): {record.CurrentDiagnosis ?? "Not documented"}
                 Evolution: {(record.Evolution.HasValue ? record.Evolution.ToString() : "Not assessed")}
-                Treatment Plan:
-                {FormatTreatmentPlan(record.TreatmentPlan)}
+                Plan:
+                {FormatPlan(record.Plan)}
                 Observations: {record.Observations ?? "None"}
                 """;
 
@@ -97,7 +97,7 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
 
             var command = connection.CreateCommand();
             command.CommandText = """
-                SELECT FullName, Room, Age, MedicalHistory, CurrentDiagnosis, Evolution, TreatmentPlan, Observations
+                SELECT FullName, Room, Age, MedicalHistory, CurrentDiagnosis, Evolution, Plan, Observations
                 FROM Patients
                 WHERE FullName = @name COLLATE NOCASE
                 """;
@@ -113,7 +113,7 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
                     MedicalHistory: reader.IsDBNull(3) ? null : JsonSerializer.Deserialize<List<string>>(reader.GetString(3)),
                     CurrentDiagnosis: reader.IsDBNull(4) ? null : reader.GetString(4),
                     Evolution: reader.IsDBNull(5) ? null : (Evolution)reader.GetInt32(5),
-                    TreatmentPlan: reader.IsDBNull(6) ? null : JsonSerializer.Deserialize<List<string>>(reader.GetString(6)),
+                    Plan: reader.IsDBNull(6) ? null : JsonSerializer.Deserialize<List<string>>(reader.GetString(6)),
                     Observations: reader.IsDBNull(7) ? null : reader.GetString(7)
                 );
             }
@@ -144,7 +144,7 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
         [Description("Comma-separated list of chronic conditions as acronyms (HTA, DL, ICC, etc.), allergies (e.g. Allergy:Penicillin), and ongoing medications (e.g. Med:Metformin) (optional)")] string? medicalHistory = null,
         [Description("Full-text current diagnosis - NO acronyms (optional)")] string? currentDiagnosis = null,
         [Description("Clinical evolution: Good, Stable, or Bad (optional)")] string? evolution = null,
-        [Description("Comma-separated list of treatment plan items (optional)")] string? treatmentPlan = null,
+        [Description("Comma-separated list of plan items (optional)")] string? plan = null,
         [Description("Any clinical information that does not fit in the other fields (e.g. vital signs, social/family history, pending results, contextual notes). Must NOT include allergies or medications (those belong in medicalHistory) (optional)")] string? observations = null)
     {
         // Input validation
@@ -175,11 +175,11 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
                     .ToList();
             }
 
-            // Parse treatment plan
-            List<string>? treatmentPlanList = null;
-            if (!string.IsNullOrWhiteSpace(treatmentPlan))
+            // Parse plan
+            List<string>? planList = null;
+            if (!string.IsNullOrWhiteSpace(plan))
             {
-                treatmentPlanList = treatmentPlan
+                planList = plan
                     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                     .ToList();
             }
@@ -192,7 +192,7 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
                 MedicalHistory: medicalHistoryList,
                 CurrentDiagnosis: currentDiagnosis,
                 Evolution: evolutionEnum,
-                TreatmentPlan: treatmentPlanList,
+                Plan: planList,
                 Observations: observations
             );
 
@@ -221,15 +221,15 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
 
             var command = connection.CreateCommand();
             command.CommandText = """
-                INSERT INTO Patients (FullName, Room, Age, MedicalHistory, CurrentDiagnosis, Evolution, TreatmentPlan, Observations)
-                VALUES (@fullName, @room, @age, @medicalHistory, @currentDiagnosis, @evolution, @treatmentPlan, @observations)
+                INSERT INTO Patients (FullName, Room, Age, MedicalHistory, CurrentDiagnosis, Evolution, Plan, Observations)
+                VALUES (@fullName, @room, @age, @medicalHistory, @currentDiagnosis, @evolution, @plan, @observations)
                 ON CONFLICT(FullName) DO UPDATE SET
                     Room = COALESCE(@room, Room),
                     Age = COALESCE(@age, Age),
                     MedicalHistory = COALESCE(@medicalHistory, MedicalHistory),
                     CurrentDiagnosis = COALESCE(@currentDiagnosis, CurrentDiagnosis),
                     Evolution = COALESCE(@evolution, Evolution),
-                    TreatmentPlan = COALESCE(@treatmentPlan, TreatmentPlan),
+                    Plan = COALESCE(@plan, Plan),
                     Observations = COALESCE(@observations, Observations)
                 """;
 
@@ -241,8 +241,8 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
             command.Parameters.AddWithValue("@currentDiagnosis", (object?)record.CurrentDiagnosis ?? DBNull.Value);
             command.Parameters.AddWithValue("@evolution", 
                 record.Evolution.HasValue ? (int)record.Evolution.Value : DBNull.Value);
-            command.Parameters.AddWithValue("@treatmentPlan", 
-                record.TreatmentPlan?.Any() == true ? JsonSerializer.Serialize(record.TreatmentPlan) : DBNull.Value);
+            command.Parameters.AddWithValue("@plan",
+                record.Plan?.Any() == true ? JsonSerializer.Serialize(record.Plan) : DBNull.Value);
             command.Parameters.AddWithValue("@observations", (object?)record.Observations ?? DBNull.Value);
 
             var rowsAffected = command.ExecuteNonQuery();
@@ -318,9 +318,9 @@ public class PatientRegistry(string connectionString = "Data Source=hospital.db"
     }
 
     /// <summary>
-    /// Formats treatment plan list for display.
+    /// Formats plan list for display.
     /// </summary>
-    private static string FormatTreatmentPlan(List<string>? plan)
+    private static string FormatPlan(List<string>? plan)
     {
         if (plan == null || !plan.Any())
             return "  - None documented";
