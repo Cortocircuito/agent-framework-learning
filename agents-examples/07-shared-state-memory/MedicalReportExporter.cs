@@ -18,7 +18,12 @@ public class MedicalReportExporter
         [Description("The full text content of the medical report")]
         string reportContent,
         [Description("The patient's actual full name extracted from the conversation (e.g., 'Juan Palomo', 'Herbert Heartstone'). Use 'Unknown_Patient' ONLY if no name was provided in the conversation.")]
-        string patientName = "Unknown_Patient")
+        string patientName = "Unknown_Patient",
+        [Description("Date of Birth")] string? dob = null,
+        [Description("Room Number")] string? room = null,
+        [Description("Emergency Contact")] string? contact = null,
+        [Description("List of treatment plan items")] List<string>? treatmentPlan = null,
+        [Description("List of next steps")] List<string>? nextSteps = null)
     {
         try
         {
@@ -98,6 +103,21 @@ public class MedicalReportExporter
                             });
                             patientBox.Item().Text(txt =>
                             {
+                                txt.Span("DOB: ").SemiBold();
+                                txt.Span(dob ?? "N/A").FontColor(Colors.Blue.Darken2);
+                            });
+                            patientBox.Item().Text(txt =>
+                            {
+                                txt.Span("Room: ").SemiBold();
+                                txt.Span(room ?? "N/A").FontColor(Colors.Blue.Darken2);
+                            });
+                            patientBox.Item().Text(txt =>
+                            {
+                                txt.Span("Emergency Contact: ").SemiBold();
+                                txt.Span(contact ?? "N/A").FontColor(Colors.Blue.Darken2);
+                            });
+                            patientBox.Item().PaddingTop(5).Text(txt =>
+                            {
                                 txt.Span("Report Date: ").SemiBold();
                                 txt.Span(DateTime.Now.ToString("D"));
                             });
@@ -113,6 +133,42 @@ public class MedicalReportExporter
                                 .FontSize(11)
                                 .LineHeight(1.5f)
                                 .Justify();
+
+                            // Treatment Plan Section
+                            if (treatmentPlan != null && treatmentPlan.Any())
+                            {
+                                content.Item().PaddingTop(20).Text("TREATMENT PLAN").FontSize(13).SemiBold().FontColor(Colors.Blue.Darken2);
+                                content.Item().PaddingTop(5).Column(plan => 
+                                {
+                                    foreach (var item in treatmentPlan)
+                                    {
+                                        plan.Item().PaddingBottom(5).Row(row =>
+                                        {
+                                            row.ConstantItem(15).Text("•");
+                                            row.RelativeItem().Text(item);
+                                        });
+                                    }
+                                });
+                            }
+
+                            // Next Steps Section
+                            if (nextSteps != null && nextSteps.Any())
+                            {
+                                content.Item().PaddingTop(20).Text("NEXT STEPS").FontSize(13).SemiBold().FontColor(Colors.Blue.Darken2);
+                                content.Item().PaddingTop(5).Column(steps => 
+                                {
+                                    int stepNum = 1;
+                                    foreach (var item in nextSteps)
+                                    {
+                                        steps.Item().PaddingBottom(5).Row(row =>
+                                        {
+                                            row.ConstantItem(20).Text($"{stepNum}.");
+                                            row.RelativeItem().Text(item);
+                                        });
+                                        stepNum++;
+                                    }
+                                });
+                            }
                         });
 
                         // Confidentiality Notice

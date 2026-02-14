@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.Agents.AI;
-using Microsoft.Extensions.AI;
 
 namespace _07_shared_state_memory;
 
@@ -110,18 +109,19 @@ public class CoordinatedAgentGroupChat
                 continue;
             }
 
-            // When MedicalSecretary follows DrHouse, inject an explicit task directive
+            // When MedicalSecretary follows ClinicalDataExtractor, inject an explicit task directive
             // so the LLM knows it must call the database and PDF tools
             string contextForSpecialist = currentContext;
-            if (specialistName == "MedicalSecretary" && previousSpecialist == "DrHouse")
+            if (specialistName == "MedicalSecretary" &&
+                previousSpecialist == "ClinicalDataExtractor")
             {
                 contextForSpecialist =
-                    $"DrHouse has completed the medical analysis. " +
+                    $"ClinicalDataExtractor has completed the medical analysis. " +
                     $"You MUST now execute these steps in order:\n" +
                     $"1. Call GetPatientData with the patient's name\n" +
                     $"2. Call UpsertPatientData to save the new findings\n" +
                     $"3. Call SaveReportToPdf to generate the PDF report\n\n" +
-                    $"DrHouse's analysis:\n{currentContext}";
+                    $"ClinicalDataExtractor's analysis:\n{currentContext}";
             }
 
             // Execute specialist task
@@ -135,9 +135,8 @@ public class CoordinatedAgentGroupChat
                     currentContext = message.Text;
                 }
 
-                // Check for tool invocations (indicates task completion)
-                if (message.Text.Contains("SaveReportToPdf", StringComparison.OrdinalIgnoreCase) ||
-                    message.Text.Contains("successfully created", StringComparison.OrdinalIgnoreCase))
+                // Check for task completion signal (reuse shared termination logic)
+                if (message.isComplete && ContainsTerminationKeyword(message.Text))
                 {
                     shouldTerminate = true;
                 }
@@ -268,7 +267,18 @@ public class CoordinatedAgentGroupChat
         bool discussionComplete = false;
 
         // Round-robin discussion between specialists
-        var specialistList = _specialists.Values.ToList();
+        // Enforce strict order: Chase -> Cameron -> Foreman -> House -> Secretary
+        var orderedNames = new List<string>
+            { "DrChase", "DraCameron", "DrForeman", "DrHouse", "MedicalSecretary" };
+
+        var specialistList = _specialists.Values
+            .OrderBy(a =>
+            {
+                var index = orderedNames.IndexOf(a.Name ?? "");
+                return index == -1 ? 999 : index; // Unknown agents go last
+            })
+            .ToList();
+
         int specialistIndex = 0;
 
         while (!discussionComplete && discussionTurns < maxDiscussionTurns)
@@ -304,7 +314,7 @@ public class CoordinatedAgentGroupChat
                     isComplete: true
                 );
 
-                currentContext = fullResponse;
+                currentContext += $"\n\n--- {currentSpecialist.Name} ---\n{fullResponse}";
             }
 
             // Check if discussion should end
@@ -341,16 +351,16 @@ public class CoordinatedAgentGroupChat
 
     /// <summary>
     /// Parses specialist names from coordinator's plan.
-    /// Expected format: "I will consult: DrHouse, MedicalSecretary"
+    /// Matches the full key (e.g., "DraCameron") OR the last camelCase word as a fuzzy alias
+    /// (e.g., "Cameron"), so the coordinator doesn't have to reproduce exact camelCase identifiers.
     /// </summary>
     private List<string> ParseRequiredSpecialists(string coordinatorPlan)
     {
         var specialists = new List<string>();
 
-        // Simple heuristic: check if specialist names appear in the plan
         foreach (var specialist in _specialists.Keys)
         {
-            if (coordinatorPlan.Contains(specialist, StringComparison.OrdinalIgnoreCase))
+            if (SpecialistMentionedInPlan(coordinatorPlan, specialist))
             {
                 specialists.Add(specialist);
             }
@@ -366,6 +376,25 @@ public class CoordinatedAgentGroupChat
     }
 
     /// <summary>
+    /// Returns true if the plan references a specialist by its exact key or by the last
+    /// significant word in its camelCase name (e.g., "Cameron" for "DraCameron").
+    /// Words shorter than 4 characters are skipped to avoid false positives from prefixes like "Dr".
+    /// </summary>
+    private static bool SpecialistMentionedInPlan(string plan, string specialistKey)
+    {
+        if (plan.Contains(specialistKey, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // Derive the last camelCase word as a fuzzy alias (e.g., "DraCameron" → "Cameron")
+        var lastWord = System.Text.RegularExpressions.Regex.Matches(specialistKey, @"[A-Z][a-z]+")
+            .LastOrDefault()?.Value;
+
+        return lastWord != null
+            && lastWord.Length >= 4
+            && plan.Contains(lastWord, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
     /// Checks if the response contains termination keywords.
     /// </summary>
     private static bool ContainsTerminationKeyword(string response)
@@ -377,11 +406,10 @@ public class CoordinatedAgentGroupChat
         {
             "task complete",
             "discussion complete",
-            "analysis complete",
             "information retrieved",
-            "successfully created",
             "report saved",
-            "pdf saved"
+            "pdf saved",
+            "TASK_COMPLETE" // Explicit signal for MedicalSecretary
         };
 
         return terminationPhrases.Any(phrase =>
@@ -426,7 +454,7 @@ public class CoordinatedAgentGroupChat
 
         try
         {
-            var element = _thread.Serialize(null);
+            var element = _thread.Serialize();
             return JsonSerializer.Serialize(element, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)
@@ -448,7 +476,7 @@ public class CoordinatedAgentGroupChat
         {
             jsonHistory = TrimHistory(jsonHistory);
             var element = JsonSerializer.Deserialize<JsonElement>(jsonHistory);
-            _thread = agent.DeserializeThread(element, null);
+            _thread = agent.DeserializeThread(element);
             Console.WriteLine("Successfully loaded conversation history.");
         }
         catch (Exception ex)
@@ -488,7 +516,7 @@ public class CoordinatedAgentGroupChat
             var trimmed = messages.Skip(startIndex).ToList();
 
             // Rebuild the JSON, preserving every property except replacing "messages"
-            using var ms = new System.IO.MemoryStream();
+            using var ms = new MemoryStream();
             using var writer = new Utf8JsonWriter(ms, new JsonWriterOptions { Indented = true });
 
             writer.WriteStartObject();
