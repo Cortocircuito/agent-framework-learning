@@ -13,6 +13,7 @@ Learning repository using Microsoft Agent Framework with LM Studio and Llama 3.2
 | **[05-multi-agent-system-advance](agents-examples/05-multi-agent-system-advance)** | Advanced multi-agent system | Round-robin with streaming |
 | **[06-multi-agent-with-memory](agents-examples/06-multi-agent-with-memory)** | Multi-agent with persistence | Shared conversation memory |
 | **[07-shared-state-memory](agents-examples/07-shared-state-memory)** | Coordinator pattern with database | SQLite persistence & intelligent routing |
+| **[08-medical-rag-system](agents-examples/08-medical-rag-system)** | RAG-based standardization | Local knowledge base & acronym normalization |
 
 ## 🎯 What You'll Learn
 
@@ -29,6 +30,8 @@ Learning repository using Microsoft Agent Framework with LM Studio and Llama 3.2
 - **Coordinator pattern** for intelligent agent routing and task delegation
 - **Database integration** with SQLite for persistent patient records
 - **PDF report generation** from structured medical data
+- **RAG (Retrieval-Augmented Generation)** for validating and standardizing inputs
+- **Local Knowledge Base** integration without external vector DB dependencies
 
 ## 📋 Prerequisites
 
@@ -82,6 +85,7 @@ Learning repository using Microsoft Agent Framework with LM Studio and Llama 3.2
 	- Multi-turn discussion support
 - **PatientRegistry.cs** (in Project 07): SQLite database manager for patient records.
 - **MedicalReportExporter.cs** (in Projects 04-07): PDF export tool for medical reports.
+- **MedicalKnowledgeBase.cs** (in Project 08): RAG service for searching local medical acronyms.
 
 ## 🔧 Key Concepts
 
@@ -116,6 +120,12 @@ Intelligent orchestration that replaces fixed round-robin with adaptive routing:
 - **Synthesis**: Coordinator provides final recommendations after specialist consultation
 - **Database Persistence**: Patient records stored in SQLite with full CRUD operations
 - **Command System**: Specialized commands for different workflow modes (`/query`, `/document`, `/list`)
+
+### RAG Standardization (Project 08)
+Enhances the coordinator pattern by adding a verification layer:
+- **Knowledge Base Lookup**: Checks `acronyms.txt` for medical terms
+- **Hallucination Prevention**: Forces agents to strictly use grounded data
+- **Standardization**: Converts free-text conditions into standardized acronyms (e.g., "High Blood Pressure" -> "HTA")
 
 ## 🎓 Sample Interaction
 
@@ -175,6 +185,27 @@ Patient: Maria Garcia
 Conditions: Fever, Cough
 Date of Birth: 1985-03-15
 Room: 302
+
+
+### RAG-Based System (Project 08)
+```text
+=== Medical RAG System ===
+
+> /document Patient John Doe, History: Hypertension, Diabetes Type 2
+
+--- [Coordinator] ---
+Routing to ClinicalDataExtractor...
+
+--- [ClinicalDataExtractor] ---
+Searching Knowledge Base for 'Hypertension'... Found 'HTA'
+Searching Knowledge Base for 'Diabetes Type 2'... Found 'DM2'
+
+Analysis Complete:
+Patient: John Doe
+Medical History: HTA, DM2
+
+--- [MedicalSecretary] ---
+✓ Patient record standardized and saved.
 ```
 
 ## 🐛 Troubleshooting
