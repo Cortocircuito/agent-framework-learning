@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace _08_medical_rag_system;
 
@@ -46,7 +47,7 @@ public record PatientRecord(
         if (!string.IsNullOrWhiteSpace(CurrentDiagnosis))
         {
             var commonAcronyms = new[] { "HTA", "DL", "ICC", "FA", "DM", "COPD", "CHF", "CAD" };
-            if (commonAcronyms.Any(acronym => CurrentDiagnosis.Contains(acronym, StringComparison.OrdinalIgnoreCase)))
+            if (commonAcronyms.Any(acronym => Regex.IsMatch(CurrentDiagnosis, $@"\b{Regex.Escape(acronym)}\b", RegexOptions.IgnoreCase)))
             {
                 validationError = "CurrentDiagnosis should not contain acronyms - use full descriptions";
                 return false;
