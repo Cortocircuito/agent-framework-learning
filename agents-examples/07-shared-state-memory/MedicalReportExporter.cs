@@ -98,39 +98,35 @@ public class MedicalReportExporter
                     page.Content().PaddingVertical(15).Column(column =>
                     {
                         // Patient Information Box
-                        column.Item().Background(Colors.Blue.Lighten4).Padding(15).Column(patientBox =>
-                        {
-                            patientBox.Item().Text("PATIENT INFORMATION").FontSize(13).SemiBold().FontColor(Colors.Blue.Darken3);
-                            patientBox.Item().PaddingTop(5).Text(txt =>
+                        column.Item().Background(Colors.Blue.Lighten4).Padding(15)
+                            .Column(patientBox =>
                             {
-                                txt.Span("Name: ").SemiBold();
-                                txt.Span(patientName).FontColor(Colors.Blue.Darken2);
-                            });
-
-                            if (!string.IsNullOrWhiteSpace(room))
-                            {
-                                patientBox.Item().Text(txt =>
+                                patientBox.Item().Text("PATIENT INFORMATION").FontSize(13)
+                                    .SemiBold().FontColor(Colors.Blue.Darken3);
+                                patientBox.Item().PaddingTop(5).Text(txt =>
                                 {
-                                    txt.Span("Room: ").SemiBold();
-                                    txt.Span(room).FontColor(Colors.Blue.Darken2);
+                                    txt.Span("Name: ").SemiBold();
+                                    txt.Span(patientName).FontColor(Colors.Blue.Darken2);
                                 });
-                            }
 
-                            if (age.HasValue)
-                            {
-                                patientBox.Item().Text(txt =>
+                                if (!string.IsNullOrWhiteSpace(room))
                                 {
-                                    txt.Span("Age: ").SemiBold();
-                                    txt.Span(age.ToString()).FontColor(Colors.Blue.Darken2);
-                                });
-                            }
+                                    patientBox.Item().Text(txt =>
+                                    {
+                                        txt.Span("Room: ").SemiBold();
+                                        txt.Span(room).FontColor(Colors.Blue.Darken2);
+                                    });
+                                }
 
-                            patientBox.Item().PaddingTop(5).Text(txt =>
-                            {
-                                txt.Span("Report Date: ").SemiBold();
-                                txt.Span(DateTime.Now.ToString("D"));
+                                if (age.HasValue)
+                                {
+                                    patientBox.Item().Text(txt =>
+                                    {
+                                        txt.Span("Age: ").SemiBold();
+                                        txt.Span(age.ToString()).FontColor(Colors.Blue.Darken2);
+                                    });
+                                }
                             });
-                        });
 
                         // Main Report Content
                         column.Item().PaddingTop(20).Column(content =>
