@@ -114,7 +114,7 @@ internal static class AgentInstructions
                                            2. Call UpsertPatientRecord with extracted data:
                                               - fullName, room, age, medicalHistory, currentDiagnosis, evolution, plan, observations
                                            3. Call SaveReportToPdf with:
-                                              - reportContent: a professional narrative combining currentDiagnosis, evolution, plan, and observations (minimum 50 characters)
+                                              - reportContent: a professional narrative combining currentDiagnosis, evolution, plan, and observations
                                               - all other fields identical to those passed to UpsertPatientRecord
 
                                            Signal completion with "TASK_COMPLETE: Report saved."

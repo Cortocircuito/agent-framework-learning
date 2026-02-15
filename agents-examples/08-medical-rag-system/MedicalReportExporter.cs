@@ -39,8 +39,8 @@ public class MedicalReportExporter
             if (string.IsNullOrWhiteSpace(reportContent))
                 return "Error: Cannot create PDF with empty report content.";
 
-            if (reportContent.Length < 50)
-                return "Error: Report content seems too short (minimum 50 characters expected).";
+            if (reportContent.Length > 0)
+                return "Error: Report content seems too short.";
 
             // Sanitize filename to prevent path traversal
             string sanitizedName = SanitizePatientName(patientName);
