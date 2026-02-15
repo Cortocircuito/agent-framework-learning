@@ -6,4 +6,5 @@
   <Project Path="05-multi-agent-system-advance/05-multi-agent-system-advance.csproj" Id="8c8676ff-d520-4170-b82a-2c0fcc90bc03" />
   <Project Path="06-multi-agent-with-memory/06-multi-agent-with-memory.csproj" Id="850c70cb-b94f-4fcc-9e84-a310960ffd0a" />
   <Project Path="07-shared-state-memory/07-shared-state-memory.csproj" />
+  <Project Path="08-medical-rag-system/08-medical-rag-system.csproj" />
 </Solution>
