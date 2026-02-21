@@ -209,7 +209,7 @@ public class SemanticMedicalSearch : IDisposable
     /// Returns the path hint used during initialization (for seeding logic in Program.cs).
     /// </summary>
     public static string GetDefaultAcronymsPath() =>
-        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MedicalDocuments", "acronyms.txt");
+        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MedicalDocuments", "acronyms.md");
 
     // ── Private Helpers ───────────────────────────────────────────────────────
 
