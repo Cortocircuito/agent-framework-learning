@@ -15,6 +15,11 @@ Learning repository using Microsoft Agent Framework with LM Studio and Llama 3.2
 | **[07-shared-state-memory](agents-examples/07-shared-state-memory)** | Coordinator pattern with database | SQLite persistence & intelligent routing |
 | **[08-medical-rag-system](agents-examples/08-medical-rag-system)** | RAG-based standardization | Local knowledge base & acronym normalization |
 
+## 📘 Project Docs
+
+- [Project 08 README](agents-examples/08-medical-rag-system/README.md)
+- [Project 09 README](agents-examples/09-medical-semantic-rag/README.md)
+
 ## 🎯 What You'll Learn
 
 - How to configure an OpenAI client to point to LM Studio
