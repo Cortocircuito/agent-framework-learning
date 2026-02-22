@@ -8,4 +8,5 @@
   <Project Path="07-shared-state-memory/07-shared-state-memory.csproj" />
   <Project Path="08-medical-rag-system/08-medical-rag-system.csproj" />
   <Project Path="09-medical-semantic-rag/09-medical-semantic-rag.csproj" />
+  <Project Path="10-medical-agent-api/10-medical-agent-api.csproj" />
 </Solution>

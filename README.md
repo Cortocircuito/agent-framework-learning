@@ -14,6 +14,8 @@ Learning repository using Microsoft Agent Framework with LM Studio and Llama 3.2
 | **[06-multi-agent-with-memory](agents-examples/06-multi-agent-with-memory)** | Multi-agent with persistence | Shared conversation memory |
 | **[07-shared-state-memory](agents-examples/07-shared-state-memory)** | Coordinator pattern with database | SQLite persistence & intelligent routing |
 | **[08-medical-rag-system](agents-examples/08-medical-rag-system)** | RAG-based standardization | Local knowledge base & acronym normalization |
+| **[09-medical-semantic-rag](agents-examples/09-medical-semantic-rag)** | Semantic RAG with vector embeddings | Cosine similarity & confidence thresholds |
+| **[10-medical-agent-api](agents-examples/10-medical-agent-api)** | Medical Agent REST API | ASP.NET Core Minimal API + SSE streaming |
 
 ## 🎯 What You'll Learn
 
@@ -32,6 +34,8 @@ Learning repository using Microsoft Agent Framework with LM Studio and Llama 3.2
 - **PDF report generation** from structured medical data
 - **RAG (Retrieval-Augmented Generation)** for validating and standardizing inputs
 - **Local Knowledge Base** integration without external vector DB dependencies
+- **Semantic Search** with vector embeddings and cosine similarity for robust term matching
+- **REST API integration** with ASP.NET Core Minimal API and Server-Sent Events (SSE) streaming
 
 ## 📋 Prerequisites
 
@@ -86,6 +90,9 @@ Learning repository using Microsoft Agent Framework with LM Studio and Llama 3.2
 - **PatientRegistry.cs** (in Project 07): SQLite database manager for patient records.
 - **MedicalReportExporter.cs** (in Projects 04-07): PDF export tool for medical reports.
 - **MedicalKnowledgeBase.cs** (in Project 08): RAG service for searching local medical acronyms.
+- **SemanticMedicalSearch.cs** (in Projects 09-10): Vector-based semantic search engine using local embeddings.
+- **Services/AgentFactory.cs** (in Project 10): Creates per-session agent instances sharing one `IChatClient`.
+- **Services/SessionManager.cs** (in Project 10): Thread-safe in-memory session registry (ConcurrentDictionary).
 
 ## 🔧 Key Concepts
 
@@ -126,6 +133,14 @@ Enhances the coordinator pattern by adding a verification layer:
 - **Knowledge Base Lookup**: Checks `acronyms.txt` for medical terms
 - **Hallucination Prevention**: Forces agents to strictly use grounded data
 - **Standardization**: Converts free-text conditions into standardized acronyms (e.g., "High Blood Pressure" -> "HTA")
+
+### REST API Integration (Project 10)
+Exposes the entire multi-agent system as an ASP.NET Core Minimal API:
+- **Minimal API**: Clean endpoint registration with `app.MapPost/Get/Delete`
+- **Dependency Injection**: Singletons for shared services (embedder, registry, exporter) and a factory for per-session agents
+- **Server-Sent Events (SSE)**: Streams agent responses token-by-token to HTTP clients
+- **Session Management**: `ConcurrentDictionary`-based registry isolates each HTTP client's conversation history
+- **OpenAPI**: Built-in `/openapi/v1.json` spec served without extra packages
 
 ## 🎓 Sample Interaction
 
@@ -206,6 +221,32 @@ Medical History: HTA, DM2
 
 --- [MedicalSecretary] ---
 ✓ Patient record standardized and saved.
+```
+
+### REST API System (Project 10)
+```bash
+# Start the API
+cd agents-examples/10-medical-agent-api
+dotnet run
+# → API ready at https://localhost:5000
+
+# Process clinical notes via curl (SSE stream)
+curl -N -X POST https://localhost:5000/api/patients/document \
+  -H "Content-Type: application/json" \
+  -d '{"notes": "Patient Maria Garcia, 62F, Room 401. AP: Hypertension, DM2. Admitted for chest pain."}'
+
+# Response (SSE stream):
+data: {"type":"session","sessionId":"a1b2c3d4"}
+data: {"type":"message","author":"MedicalCoordinator","text":"Routing to ClinicalDataExtractor and MedicalSecretary...","isStreaming":false,"isComplete":true}
+data: {"type":"message","author":"ClinicalDataExtractor","text":"Patient: Maria Garcia\nRoom: 401...","isStreaming":true,"isComplete":false}
+data: {"type":"message","author":"MedicalSecretary","text":"TASK_COMPLETE: Report saved.","isStreaming":false,"isComplete":true}
+data: {"type":"done"}
+
+# Query a patient (JSON response)
+curl https://localhost:5000/api/patients/Maria%20Garcia
+
+# List all sessions
+curl https://localhost:5000/api/sessions
 ```
 
 ## 🐛 Troubleshooting
